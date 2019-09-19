@@ -51,7 +51,7 @@ namespace zbar_ros_redux
     image_transport::ImageTransport it(nh_);
     image_transport::ImageTransport it_priv(private_nh_);
 
-    camera_sub_ = it.subscribe("image", 1, &BarcodeReaderNodelet::imageCb, this);
+    camera_sub_ = it.subscribe("image_raw", 1, &BarcodeReaderNodelet::imageCb, this);
     debug_pub_ = it_priv.advertise("debug", 1);
 
     qr_pub_ = nh_.advertise<zbar_ros_redux::DetectedQr>("qr", 1);
@@ -88,6 +88,7 @@ namespace zbar_ros_redux
          symbol != zbar_image.symbol_end(); ++symbol)
     {
       std::string barcode = symbol->get_data();
+      NODELET_INFO("Found symbol: %s, bounding box has %d entries", barcode.c_str(), symbol->get_location_size());
       
       // verify if repeated barcode throttling is enabled
       if (throttle_ > 0.0)
@@ -116,25 +117,29 @@ namespace zbar_ros_redux
       detected_message.header.frame_id = image->header.frame_id;
       detected_message.header.stamp = image->header.stamp;
       detected_message.qr_message = barcode;
-      for(auto pt_iterator = symbol->point_begin(); pt_iterator != symbol->point_end(); ++pt_iterator)
+      for(int i = 0; i < symbol->get_location_size(); ++i)
       {
         geometry_msgs::Point pt;
-        pt.x = (*pt_iterator).x;
-        pt.y = (*pt_iterator).y;
+        pt.x = symbol->get_location_x(i);
+        pt.y = symbol->get_location_y(i);
         pt.z = 0;
         detected_message.bounding_polygon.push_back(pt);
       }
       qr_pub_.publish(detected_message);
       if (publish_debug)
       {
-        auto first_point = *(symbol->point_begin());
-        auto prev_point = first_point;
-        for(auto pt_iterator = symbol->point_begin(); pt_iterator != symbol->point_end(); ++pt_iterator)
+        int pt_count = symbol->get_location_size();
+        cv::Point2d centroid;
+        for(int i = 0; i < pt_count; ++i)
         {
-          cv::line(debug_image->image, cv::Point2d(prev_point.x, prev_point.y), cv::Point2d((*pt_iterator).x, (*pt_iterator).y), cv::Scalar(0, 255, 0));
-          prev_point = *pt_iterator;
+          cv::Point2d prev_point{symbol->get_location_x(i), symbol->get_location_y(i)};
+          cv::Point2d cur_point{symbol->get_location_x((i + 1) % pt_count), symbol->get_location_y((i + 1) % pt_count)};
+          cv::line(debug_image->image, prev_point, cur_point, cv::Scalar(0, 255, 0));
+          centroid += prev_point;
         }
-        cv::line(debug_image->image, cv::Point2d(first_point.x, first_point.y), cv::Point2d(prev_point.x, prev_point.y), cv::Scalar(0, 255, 0));
+        centroid.x /= pt_count;
+        centroid.y /= pt_count;
+        cv::putText(debug_image->image, barcode, centroid, cv::FONT_HERSHEY_DUPLEX, 1.0, cv::Scalar(255, 0, 0));
       }
     }
     if (publish_debug)
