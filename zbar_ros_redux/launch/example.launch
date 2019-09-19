@@ -4,16 +4,17 @@
     <node pkg="nodelet" type="nodelet" name="zbar_manager"  args="manager"/>
 
     <!-- Example camera launch -->
-    <node pkg="nodelet" type="nodelet" name="uvc_camera" args="load uvc_camera/CameraNodelet zbar_manager">
-        <remap from="image_raw" to="image"/>
+    <node pkg="nodelet" type="nodelet" name="cv_camera" args="load cv_camera/CvCameraNodelet zbar_manager">
+        
     </node>
 
-    <!--<node pkg="nodelet" type="nodelet" name="barcode_reader" args="load zbar_ros/barcode_reader_nodelet zbar_manager">-->
+    <!--<node pkg="nodelet" type="nodelet" name="qr_reader" args="load zbar_ros_redux/qe_reader_nodelet zbar_manager">-->
         <!--<param name="throttle_repeated_barcodes" type="double" value="2.0"/>-->
     <!--</node>-->
 
-    <node pkg="zbar_ros" type="barcode_reader_node" name="barcode_reader">
-        <param name="throttle_repeated_barcodes" type="double" value="2.0"/>
+    <node pkg="zbar_ros_redux" type="qr_reader_node" name="qr_reader">
+        <remap from="image_raw" to="cv_camera/image_raw"/>
+        <!-- <param name="throttle_repeated_barcodes" type="double" value="2.0"/> -->
     </node>
 
 </launch>
