@@ -83,7 +83,6 @@ namespace zbar_ros_redux
          symbol != zbar_image.symbol_end(); ++symbol)
     {
       std::string barcode = symbol->get_data();
-      NODELET_INFO("Found symbol: %s, bounding box has %d entries", barcode.c_str(), symbol->get_location_size());
 
       // publish barcode
       zbar_ros_redux::DetectedQr detected_message;
