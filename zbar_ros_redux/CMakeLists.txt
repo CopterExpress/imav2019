@@ -1,7 +1,16 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(zbar_ros_redux)
 
-find_package(catkin REQUIRED COMPONENTS roscpp cv_bridge nodelet roslint message_generation std_msgs geometry_msgs)
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  cv_bridge
+  nodelet
+  roslint
+  message_generation
+  std_msgs
+  geometry_msgs
+  image_transport
+)
 
 add_message_files(
   FILES

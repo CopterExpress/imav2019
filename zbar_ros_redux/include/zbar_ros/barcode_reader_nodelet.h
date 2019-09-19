@@ -39,6 +39,7 @@
 #include <unordered_map>
 #include <string>
 #include "nodelet/nodelet.h"
+#include <image_transport/image_transport.h>
 
 namespace zbar_ros_redux
 {
@@ -56,7 +57,7 @@ namespace zbar_ros_redux
     void cleanCb();
 
     ros::NodeHandle nh_, private_nh_;
-    ros::Subscriber camera_sub_;
+    image_transport::Subscriber camera_sub_;
     ros::Publisher qr_pub_;
     ros::Timer clean_timer_;
     zbar::ImageScanner scanner_;

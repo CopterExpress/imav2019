@@ -17,6 +17,7 @@
   <depend>roscpp</depend>
   <depend>cv_bridge</depend>
   <depend>nodelet</depend>
+  <depend>image_transport</depend>
   <build_depend>roslint</build_depend>
   <build_depend>message_generation</build_depend>
 

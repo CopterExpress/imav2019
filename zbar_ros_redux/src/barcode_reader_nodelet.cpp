@@ -47,37 +47,26 @@ namespace zbar_ros_redux
   {
     nh_ = getNodeHandle();
     private_nh_ = getPrivateNodeHandle();
+    image_transport::ImageTransport it(nh_);
+    image_transport::ImageTransport it_priv(private_nh_);
 
-    qr_pub_ = nh_.advertise<zbar_ros_redux::DetectedQr>("qr", 1,
-      std::bind(&BarcodeReaderNodelet::connectCb, this),
-      std::bind(&BarcodeReaderNodelet::disconnectCb, this));
+    camera_sub_ = it.subscribe("image", 1, &BarcodeReaderNodelet::imageCb, this);
+
+    qr_pub_ = nh_.advertise<zbar_ros_redux::DetectedQr>("qr", 1);
 
     private_nh_.param<double>("throttle_repeated_barcodes", throttle_, 0.0);
     if (throttle_ > 0.0){
       clean_timer_ = nh_.createTimer(ros::Duration(10.0), std::bind(&BarcodeReaderNodelet::cleanCb, this));
     }
-  };
-
-  void BarcodeReaderNodelet::connectCb()
-  {
-    if (!camera_sub_ && qr_pub_.getNumSubscribers() > 0)
-    {
-      NODELET_INFO("Connecting to camera topic.");
-      camera_sub_ = nh_.subscribe("image", 10, &BarcodeReaderNodelet::imageCb, this);
-    }
-  }
-
-  void BarcodeReaderNodelet::disconnectCb()
-  {
-    if (qr_pub_.getNumSubscribers() == 0)
-    {
-      NODELET_INFO("Unsubscribing from camera topic.");
-      camera_sub_.shutdown();
-    }
   }
 
   void BarcodeReaderNodelet::imageCb(const sensor_msgs::ImageConstPtr &image)
   {
+    if (qr_pub_.getNumSubscribers() < 1)
+    {
+      return;
+    }
+    
     cv_bridge::CvImageConstPtr cv_image;
     cv_image = cv_bridge::toCvShare(image, "mono8");
 
