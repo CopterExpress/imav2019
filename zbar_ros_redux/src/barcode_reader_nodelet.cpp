@@ -29,10 +29,10 @@
 *
 */
 
-#include "zbar_ros/barcode_reader_nodelet.h"
+#include "zbar_ros_redux/barcode_reader_nodelet.h"
+#include "zbar_ros_redux/DetectedQr.h"
 #include "pluginlib/class_list_macros.h"
 #include "std_msgs/String.h"
-#include "zbar_ros_redux/DetectedQr.h"
 #include <functional>
 
 namespace zbar_ros_redux
