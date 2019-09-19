@@ -34,6 +34,7 @@
 #include "pluginlib/class_list_macros.h"
 #include "std_msgs/String.h"
 #include <functional>
+#include <opencv2/opencv.hpp>
 
 namespace zbar_ros_redux
 {
@@ -51,6 +52,7 @@ namespace zbar_ros_redux
     image_transport::ImageTransport it_priv(private_nh_);
 
     camera_sub_ = it.subscribe("image", 1, &BarcodeReaderNodelet::imageCb, this);
+    debug_pub_ = it_priv.advertise("debug", 1);
 
     qr_pub_ = nh_.advertise<zbar_ros_redux::DetectedQr>("qr", 1);
 
@@ -62,13 +64,20 @@ namespace zbar_ros_redux
 
   void BarcodeReaderNodelet::imageCb(const sensor_msgs::ImageConstPtr &image)
   {
-    if (qr_pub_.getNumSubscribers() < 1)
+    bool publish_debug = debug_pub_.getNumSubscribers() > 0;
+    bool has_subscribers = (qr_pub_.getNumSubscribers() > 0) || publish_debug;
+    if (!has_subscribers)
     {
       return;
     }
     
     cv_bridge::CvImageConstPtr cv_image;
+    cv_bridge::CvImagePtr debug_image;
     cv_image = cv_bridge::toCvShare(image, "mono8");
+    if (publish_debug)
+    {
+      debug_image = cv_bridge::toCvCopy(image);
+    }
 
     zbar::Image zbar_image(cv_image->image.cols, cv_image->image.rows, "Y800", cv_image->image.data,
         cv_image->image.cols * cv_image->image.rows);
@@ -116,6 +125,21 @@ namespace zbar_ros_redux
         detected_message.bounding_polygon.push_back(pt);
       }
       qr_pub_.publish(detected_message);
+      if (publish_debug)
+      {
+        auto first_point = *(symbol->point_begin());
+        auto prev_point = first_point;
+        for(auto pt_iterator = symbol->point_begin(); pt_iterator != symbol->point_end(); ++pt_iterator)
+        {
+          cv::line(debug_image->image, cv::Point2d(prev_point.x, prev_point.y), cv::Point2d((*pt_iterator).x, (*pt_iterator).y), cv::Scalar(0, 255, 0));
+          prev_point = *pt_iterator;
+        }
+        cv::line(debug_image->image, cv::Point2d(first_point.x, first_point.y), cv::Point2d(prev_point.x, prev_point.y), cv::Scalar(0, 255, 0));
+      }
+    }
+    if (publish_debug)
+    {
+      debug_pub_.publish(debug_image->toImageMsg());
     }
 
     zbar_image.set_data(NULL, 0);

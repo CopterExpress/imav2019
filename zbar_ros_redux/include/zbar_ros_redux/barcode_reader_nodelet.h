@@ -58,6 +58,7 @@ namespace zbar_ros_redux
 
     ros::NodeHandle nh_, private_nh_;
     image_transport::Subscriber camera_sub_;
+    image_transport::Publisher debug_pub_;
     ros::Publisher qr_pub_;
     ros::Timer clean_timer_;
     zbar::ImageScanner scanner_;
