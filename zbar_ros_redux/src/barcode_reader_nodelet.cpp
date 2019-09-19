@@ -54,12 +54,7 @@ namespace zbar_ros_redux
     camera_sub_ = it.subscribe("image_raw", 1, &BarcodeReaderNodelet::imageCb, this);
     debug_pub_ = it_priv.advertise("debug", 1);
 
-    qr_pub_ = nh_.advertise<zbar_ros_redux::DetectedQr>("qr", 1);
-
-    private_nh_.param<double>("throttle_repeated_barcodes", throttle_, 0.0);
-    if (throttle_ > 0.0){
-      clean_timer_ = nh_.createTimer(ros::Duration(10.0), std::bind(&BarcodeReaderNodelet::cleanCb, this));
-    }
+    qr_pub_ = private_nh_.advertise<zbar_ros_redux::DetectedQr>("qr", 1);
   }
 
   void BarcodeReaderNodelet::imageCb(const sensor_msgs::ImageConstPtr &image)
@@ -89,28 +84,6 @@ namespace zbar_ros_redux
     {
       std::string barcode = symbol->get_data();
       NODELET_INFO("Found symbol: %s, bounding box has %d entries", barcode.c_str(), symbol->get_location_size());
-      
-      // verify if repeated barcode throttling is enabled
-      if (throttle_ > 0.0)
-      {
-        // check if barcode has been recorded as seen, and skip detection
-        if (barcode_memory_.count(barcode) > 0)
-        {
-          // check if time reached to forget barcode
-          if (ros::Time::now() > barcode_memory_.at(barcode))
-          {
-            NODELET_DEBUG("Memory timed out for barcode, publishing");
-            barcode_memory_.erase(barcode);
-          }
-          else
-          {
-            // if timeout not reached, skip this reading
-            continue;
-          }
-        }
-        // record barcode as seen, with a timeout to 'forget'
-        barcode_memory_.insert(std::make_pair(barcode, ros::Time::now() + ros::Duration(throttle_)));
-      }
 
       // publish barcode
       zbar_ros_redux::DetectedQr detected_message;
@@ -150,19 +123,6 @@ namespace zbar_ros_redux
     zbar_image.set_data(NULL, 0);
   }
 
-  void BarcodeReaderNodelet::cleanCb()
-  {
-    for (auto it = barcode_memory_.begin();
-         it != barcode_memory_.end(); ++it)
-    {
-      if (ros::Time::now() > it->second)
-      {
-        NODELET_DEBUG_STREAM("Cleaned " << it->first << " from memory");
-        barcode_memory_.erase(it);
-      }
-    }
-
-  }
 }  // namespace zbar_ros
 
 PLUGINLIB_EXPORT_CLASS(zbar_ros_redux::BarcodeReaderNodelet, nodelet::Nodelet);

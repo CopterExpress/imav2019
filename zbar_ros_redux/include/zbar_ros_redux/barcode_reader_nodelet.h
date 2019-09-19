@@ -51,10 +51,7 @@ namespace zbar_ros_redux
 
   private:
     virtual void onInit();
-    void connectCb();
-    void disconnectCb();
     void imageCb(const sensor_msgs::ImageConstPtr &image);
-    void cleanCb();
 
     ros::NodeHandle nh_, private_nh_;
     image_transport::Subscriber camera_sub_;
@@ -62,9 +59,6 @@ namespace zbar_ros_redux
     ros::Publisher qr_pub_;
     ros::Timer clean_timer_;
     zbar::ImageScanner scanner_;
-    std::unordered_map<std::string, ros::Time> barcode_memory_;
-
-    double throttle_;
   };
 
 }  // namespace zbar_ros
