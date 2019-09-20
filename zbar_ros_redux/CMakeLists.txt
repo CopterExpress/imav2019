@@ -44,6 +44,9 @@ add_dependencies(qr_reader_nodelet
 add_executable(qr_reader_node src/barcode_reader_node.cpp)
 target_link_libraries(qr_reader_node ${catkin_LIBRARIES})
 
+target_compile_features(qr_reader_node PUBLIC cxx_std_11)
+target_compile_features(qr_reader_nodelet PUBLIC cxx_std_11)
+
 roslint_cpp()
 
 install(TARGETS qr_reader_node qr_reader_nodelet
