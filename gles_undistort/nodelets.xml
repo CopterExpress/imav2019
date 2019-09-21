@@ -1,0 +1,11 @@
+<library path="lib/libgles_undistort">
+
+    <class name="gles_undistort/undistorter"
+           type="gles_undistort::Undistorter"
+           base_class_type="nodelet::Nodelet">
+        <description>
+            OpenGL ES-based undistortion nodelet.
+        </description>
+    </class>
+
+</library>

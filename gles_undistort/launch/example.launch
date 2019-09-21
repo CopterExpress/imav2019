@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="gles_undistort" type="gles_undistort_node" name="undistort_node" output="screen"/>
+
+</launch>
