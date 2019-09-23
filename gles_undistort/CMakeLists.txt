@@ -137,6 +137,11 @@ include_directories(
 ## Declare a C++ library
 add_library(${PROJECT_NAME}
   src/gles_undistort.cpp
+  src/gfx/Context.cpp
+  src/gfx/Mesh.cpp
+  src/gfx/Shader.cpp
+  src/gfx/UndistortedMesh.cpp
+  src/gfx/Texture.cpp
 )
 
 ## Add cmake target dependencies of the library
