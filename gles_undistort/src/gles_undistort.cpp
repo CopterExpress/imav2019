@@ -68,8 +68,6 @@ public:
         cam_sub_ = it_.subscribeCamera("image_raw", 1, &Undistorter::cameraCallback, this);
     }
 
-    float colR, colG, colB;
-
     void cameraCallback(const sensor_msgs::ImageConstPtr& src, const sensor_msgs::CameraInfoConstPtr& cameraInfo)
     {
         if (ecs_.context == EGL_NO_CONTEXT)
@@ -104,29 +102,21 @@ public:
 
             mesh_ = Gfx::uploadMesh(undistMesh);
             shader_.init().addStage(GL_VERTEX_SHADER, Gfx::Shaders::undistortVertexShader).addStage(GL_FRAGMENT_SHADER, Gfx::Shaders::undistortFragmentShader).link();
-
         }
 
-        cv::Mat gl_image(fbo_.height, fbo_.width, CV_8UC4, cv::Scalar(0, 0, 255, 255));
-        colR = (ros::Time::now().nsec) / 1e9f;
-        colG = 1 - colR;
-        colB = colR * colG;
+        const auto src_image = cv_bridge::toCvShare(src, "bgra8");
+        tex_ = Gfx::updateTexture(tex_, src->width, src->height, src_image->image.data);
 
-        //NODELET_INFO("Publishing framebuffer %d, size (%d; %d)", testFbo.framebuffer, testFbo.width, testFbo.height);
-        EGLContext ctx = eglGetCurrentContext();
-        //NODELET_INFO("Using context handle %lx", ctx);
+        cv::Mat gl_image(fbo_.height, fbo_.width, CV_8UC4, cv::Scalar(0, 0, 255, 255));
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo_.framebuffer);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_.framebuffer);
         glViewport(0, 0, fbo_.width, fbo_.height);
-        glClearColor(colR, colG, colB, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT); OGL_CHECKED(glClear);
+        glClear(GL_COLOR_BUFFER_BIT);
+        render(mesh_, shader_, tex_.id);
         glPixelStorei(GL_PACK_ALIGNMENT, 4);
         glPixelStorei(GL_PACK_ROW_LENGTH, gl_image.step / gl_image.elemSize());
         glReadBuffer(GL_COLOR_ATTACHMENT0);
-        
-        glFlush();
-        glFinish();
         glReadPixels(0, 0, fbo_.width, fbo_.height, GL_RGBA, GL_UNSIGNED_BYTE, gl_image.ptr()); OGL_CHECKED(glReadPixels);
 
         cv_bridge::CvImage img;
@@ -137,6 +127,27 @@ public:
 
         fbo_pub_.publish(img.toImageMsg());
     }
+
+    static void render(const Gfx::GpuMesh& mesh, const Gfx::Shader& shader, GLuint texture)
+    {
+        shader.activate();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+
+        glUniform1i(shader.unfLoc("tex"), 0);
+
+        GLint posLoc = shader.attrLoc("pos");
+        GLint texLoc = shader.attrLoc("texCoord");
+        glBindBuffer(GL_ARRAY_BUFFER, mesh.vtxBuf);
+        glEnableVertexAttribArray(posLoc);
+        glVertexAttribPointer(posLoc, 2, GL_FLOAT, GL_FALSE, sizeof(Gfx::VertexData), (void*)offsetof(Gfx::VertexData, vpos));
+        glEnableVertexAttribArray(texLoc);
+        glVertexAttribPointer(texLoc, 2, GL_FLOAT, GL_FALSE, sizeof(Gfx::VertexData), (void*)offsetof(Gfx::VertexData, texcoord));
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.idxBuf);
+        glDrawElements(GL_TRIANGLES, mesh.idxCount, GL_UNSIGNED_SHORT, nullptr);
+}
+
 };
 
 }

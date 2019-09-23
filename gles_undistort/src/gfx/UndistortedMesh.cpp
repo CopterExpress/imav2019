@@ -21,7 +21,7 @@ Mesh createUndistortedMesh(const Mesh& original, const sensor_msgs::CameraInfoCo
 
     for(int i = 0; i < ci->K.size(); ++i)
     {
-        distCoeffs.at<double>(i) = ci->K[i];
+        distCoeffs.at<double>(i) = ci->D[i];
     }
 
     cv::undistortPoints(sourcePoints, undistPoints, cameraMatrix, distCoeffs, cv::noArray(), cameraMatrix);

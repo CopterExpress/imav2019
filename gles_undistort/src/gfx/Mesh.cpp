@@ -10,7 +10,7 @@ Mesh createRegularMesh(unsigned int horizVertices, unsigned int vertVertices, fl
     for(int iy = 0; iy < vertVertices; ++iy)
     {
         float y = sizeY * iy / (vertVertices - 1);
-        float ty = 1.0f - float(iy) / float(vertVertices - 1);
+        float ty = float(iy) / float(vertVertices - 1);
         for(int ix = 0; ix < horizVertices; ++ix)
         {
             float x = sizeX * ix / (horizVertices - 1);
