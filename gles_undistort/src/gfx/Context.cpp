@@ -77,7 +77,7 @@ namespace Gfx
             EGL_HEIGHT, 480,
             EGL_NONE
         };
-        ecs.surface = eglCreatePbufferSurface(eglConnectionState.display, ecs.config[0], pbufferAttribs);
+        ecs.surface = eglCreatePbufferSurface(ecs.display, ecs.config[0], pbufferAttribs);
         if (ecs.surface == EGL_NO_SURFACE)
         {
             EGLint error = eglGetError();
