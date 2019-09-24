@@ -2,6 +2,11 @@
 #include <stdexcept>
 #include <sstream>
 
+// Allow skipping pbuffer creation
+#ifndef CREATE_PBUFFER
+#define CREATE_PBUFFER 0
+#endif /* CREATE_PBUFFER */
+
 namespace Gfx
 {
     EglConnectionState createContext()
