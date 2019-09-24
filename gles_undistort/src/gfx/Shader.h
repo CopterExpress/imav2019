@@ -28,6 +28,7 @@ public:
     Shader& init()
     {
         program = glCreateProgram();
+        return *this;
     }
 
     Shader& addStage(GLenum stage, const char* source)
