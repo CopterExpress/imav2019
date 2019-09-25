@@ -17,11 +17,6 @@
 
 // DANGER: OpenGL (ES) code ahead!
 
-// Allow skipping pbuffer creation
-#ifndef CREATE_PBUFFER
-#define CREATE_PBUFFER 0
-#endif /* CREATE_PBUFFER */
-
 #define _XSTR(s) _STR(s)
 #define _STR(s) #s
 
