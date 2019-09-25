@@ -6,10 +6,9 @@
     <!-- Example camera launch -->
     <node pkg="nodelet" type="nodelet" name="cv_camera" args="load cv_camera/CvCameraNodelet zbar_manager">
         <param name="device_id" value="1"></param>
-        
     </node>
 
-    <!--<node pkg="nodelet" type="nodelet" name="qr_reader" args="load zbar_ros_redux/qe_reader_nodelet zbar_manager">-->
+    <!--<node pkg="nodelet" type="nodelet" name="qr_reader" args="load zbar_ros_redux/qr_reader_nodelet zbar_manager">-->
         <!--<param name="throttle_repeated_barcodes" type="double" value="2.0"/>-->
     <!--</node>-->
 

@@ -1,0 +1,15 @@
+<launch>
+    <arg name="camera" default="T265/fisheye1"/>
+    <arg name="manager" default="realsense2_camera_manager"/>
+
+    <!-- qr detector nodelent -->
+    <node pkg="nodelet" type="nodelet" name="qr_reader" args="load zbar_ros_redux/qr_reader_nodelet $(arg manager)">
+        <param name="throttle_repeated_barcodes" type="double" value="2.0"/>
+        <remap from="image_raw" to="$(arg camera)/image_raw"/>
+    </node>
+
+    <!-- qr detector node -->
+    <!-- <node pkg="zbar_ros_redux" type="qr_reader_node" name="qr_reader">
+        <remap from="image_raw" to="$(arg camera)/image_raw"/>
+    </node> -->
+</launch>
