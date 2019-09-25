@@ -1,0 +1,24 @@
+<launch>
+    <include file="$(find realsense2_camera)/launch/rs_t265.launch">
+        <arg name="initial_reset" value="true"/>
+    </include>
+
+    <!-- throttle odometry message -->
+    <!-- <node name="t265_odom_throttler" type="throttle" pkg="topic_tools" args="messages T265/odom/sample 400 T265/odom/sample/throttled"/> -->
+
+    <!-- vpe publisher for T265 -->
+    <node name="vpe_publisher" pkg="clever" type="vpe_publisher" clear_params="true" output="screen">
+        <remap from="~odom" to="T265/odom/sample"/>
+        <!-- <remap from="~vpe" to="mavros/vision_pose/pose"/> -->
+        <param name="frame_id" value="t265_origin"/>
+        <param name="child_frame_id" value="base_link"/>
+        <param name="offset_frame_id" value="t265"/>
+    </node>
+
+    <!-- throttle output pose message -->
+    <node name="vpe_throttler" type="throttle" pkg="topic_tools" args="messages vpe_publisher/vpe 50 mavros/vision_pose/pose"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="base_link_realsense" args="0.05 0 -0.05 0 0 0 base_link t265_camera"/>
+
+    <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="base_link_realsense" args="0.05 0 -0.05 -1.57 0 -1.57 base_link t265_optical"/> -->
+</launch>
