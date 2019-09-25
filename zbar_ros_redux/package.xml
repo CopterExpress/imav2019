@@ -2,8 +2,7 @@
 <package format="2">
   <name>zbar_ros_redux</name>
   <version>0.1.0</version>
-  <description>Lightweight ROS wrapper for Zbar barcode/qrcode reader library (http://zbar.sourceforge
-    .net/)</description>
+  <description>Lightweight ROS wrapper for Zbar barcode/qrcode reader library (http://zbar.sourceforge.net/)</description>
 
   <author email="paul@bovbel.com">Paul Bovbel</author>
   <author email="sfalexrog@gmail.com">Alexey Rogachevskiy</author>
