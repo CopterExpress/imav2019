@@ -41,7 +41,8 @@ private:
     image_transport::Publisher fbo_pub_;
     image_transport::CameraSubscriber cam_sub_;
 
-
+    int mesh_subdiv_x_;
+    int mesh_subdiv_y_;
 
     ros::Timer timer_;
 public:
@@ -57,6 +58,9 @@ public:
         image_transport::ImageTransport it_priv_(nh_priv_);
 
         //createEglContext();
+
+        mesh_subdiv_x_ = nh_priv_.param("subdiv_x", 40);
+        mesh_subdiv_y_ = nh_priv_.param("subdiv_y", 30);
 
         fbo_pub_ = it_priv_.advertise("image_rect", 1);
 
@@ -85,7 +89,7 @@ public:
             tex_ = Gfx::createTexture(src->width, src->height, nullptr);
 
             // FIXME: Add vertices count as parameter
-            Gfx::Mesh origMesh = Gfx::createRegularMesh(40, 30, src->width, src->height);
+            Gfx::Mesh origMesh = Gfx::createRegularMesh(mesh_subdiv_x_, mesh_subdiv_y_, src->width, src->height);
             Gfx::Mesh undistMesh = Gfx::createUndistortedMesh(origMesh, cameraInfo);
 
             // Normalize vertex positions to [-1, 1] on both axes
