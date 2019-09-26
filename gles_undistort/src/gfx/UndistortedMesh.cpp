@@ -19,7 +19,7 @@ Mesh createUndistortedMesh(const Mesh& original, const sensor_msgs::CameraInfoCo
         cameraMatrix.at<double>(i / 3, i % 3) = ci->K[i];
     }
 
-    for(int i = 0; i < ci->K.size(); ++i)
+    for(int i = 0; i < ci->D.size(); ++i)
     {
         distCoeffs.at<double>(i) = ci->D[i];
     }
