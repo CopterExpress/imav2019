@@ -47,7 +47,7 @@ GpuMesh uploadMesh(const Mesh& mesh)
     glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(VertexData), mesh.vertices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, result.idxBuf);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(GLshort), mesh.indices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(GLuint), mesh.indices.data(), GL_STATIC_DRAW);
 
     result.idxCount = mesh.indices.size();
 

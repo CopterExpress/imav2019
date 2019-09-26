@@ -140,7 +140,7 @@ public:
         glVertexAttribPointer(texLoc, 2, GL_FLOAT, GL_FALSE, sizeof(Gfx::VertexData), (void*)offsetof(Gfx::VertexData, texcoord));
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.idxBuf);
-        glDrawElements(GL_TRIANGLES, mesh.idxCount, GL_UNSIGNED_SHORT, nullptr);
+        glDrawElements(GL_TRIANGLES, mesh.idxCount, GL_UNSIGNED_INT, nullptr);
 }
 
 };

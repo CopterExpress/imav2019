@@ -16,7 +16,7 @@ struct VertexData
 struct Mesh
 {
     std::vector<VertexData> vertices;
-    std::vector<GLshort> indices;
+    std::vector<GLuint> indices;
 };
 
 struct GpuMesh
