@@ -33,15 +33,40 @@
 #include "zbar_ros_redux/DetectedQr.h"
 #include "pluginlib/class_list_macros.h"
 #include "std_msgs/String.h"
+#include <geometry_msgs/TransformStamped.h>
 #include <functional>
 #include <opencv2/opencv.hpp>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 namespace zbar_ros_redux
 {
 
+  inline void fillTransform(geometry_msgs::Transform& transform, const cv::Vec3d& rvec, const cv::Vec3d& tvec)
+  {
+    transform.translation.x = tvec[0];
+    transform.translation.y = tvec[1];
+    transform.translation.z = tvec[2];
+
+    double angle = norm(rvec);
+    cv::Vec3d axis = rvec / angle;
+
+    tf2::Quaternion q;
+    q.setRotation(tf2::Vector3(axis[0], axis[1], axis[2]), angle);
+
+    transform.rotation.w = q.w();
+    transform.rotation.x = q.x();
+    transform.rotation.y = q.y();
+    transform.rotation.z = q.z();
+  }
+
   BarcodeReaderNodelet::BarcodeReaderNodelet()
   {
-    scanner_.set_config(zbar::ZBAR_NONE, zbar::ZBAR_CFG_ENABLE, 1);
+    scanner_.set_config(zbar::ZBAR_NONE, zbar::ZBAR_CFG_ENABLE, 0);
+    scanner_.set_config(zbar::ZBAR_QRCODE, zbar::ZBAR_CFG_ENABLE, 1);
   }
 
   void BarcodeReaderNodelet::onInit()
@@ -51,13 +76,35 @@ namespace zbar_ros_redux
     image_transport::ImageTransport it(nh_);
     image_transport::ImageTransport it_priv(private_nh_);
 
-    camera_sub_ = it.subscribe("image_raw", 1, &BarcodeReaderNodelet::imageCb, this);
+    private_nh_.param("send_tf", send_tf_, false);
+    private_nh_.param("symbol_size", symbol_size_, 0.2);
+
+    if (send_tf_)
+    {
+      obj_points_.push_back(cv::Point3f(0, 0, 0));
+      obj_points_.push_back(cv::Point3f(0, symbol_size_, 0));
+      obj_points_.push_back(cv::Point3f(symbol_size_, 0, 0));
+      obj_points_.push_back(cv::Point3f(symbol_size_, symbol_size_, 0));
+    }
+    // camera_sub_ = it.subscribe("image_raw", 1, &BarcodeReaderNodelet::imageCb, this);
+
+    camera_sub_ = it.subscribeCamera("image_raw", 1, &BarcodeReaderNodelet::imageCb, this);
     debug_pub_ = it_priv.advertise("debug", 1);
 
     qr_pub_ = private_nh_.advertise<zbar_ros_redux::DetectedQr>("qr", 1);
   }
 
-  void BarcodeReaderNodelet::imageCb(const sensor_msgs::ImageConstPtr &image)
+  void BarcodeReaderNodelet::parseCameraInfo(const sensor_msgs::CameraInfoConstPtr& cinfo, cv::Mat& matrix, cv::Mat& dist)
+  {
+    for (unsigned int i = 0; i < 3; ++i)
+      for (unsigned int j = 0; j < 3; ++j)
+        matrix.at<double>(i, j) = cinfo->K[3 * i + j];
+
+    for (unsigned int k = 0; k < cinfo->D.size(); k++)
+      dist.at<double>(k) = cinfo->D[k];
+  }
+
+  void BarcodeReaderNodelet::imageCb(const sensor_msgs::ImageConstPtr& image, const sensor_msgs::CameraInfoConstPtr &cinfo)
   {
     bool publish_debug = debug_pub_.getNumSubscribers() > 0;
     bool has_subscribers = (qr_pub_.getNumSubscribers() > 0) || publish_debug;
@@ -65,7 +112,12 @@ namespace zbar_ros_redux
     {
       return;
     }
-    
+
+    if (send_tf_)
+    {
+      parseCameraInfo(cinfo, camera_matrix_, dist_coeffs_);
+    }
+
     cv_bridge::CvImageConstPtr cv_image;
     cv_bridge::CvImagePtr debug_image;
     cv_image = cv_bridge::toCvShare(image, "mono8");
@@ -98,6 +150,29 @@ namespace zbar_ros_redux
         detected_message.bounding_polygon.push_back(pt);
       }
       qr_pub_.publish(detected_message);
+
+      if (send_tf_)
+      {
+        std::vector<cv::Point2f> img_points(4);
+        for(int i = 0; i < symbol->get_location_size(); ++i)
+        {
+          img_points[i].x = symbol->get_location_x(i);
+          img_points[i].y = symbol->get_location_y(i);
+        }
+        cv::Vec3d rvec, tvec;
+        bool valid = solvePnP(obj_points_, img_points, camera_matrix_, dist_coeffs_, rvec, tvec, false);
+        if (valid) {
+          geometry_msgs::TransformStamped transform;
+          transform.header.stamp = image->header.stamp;
+          transform.header.frame_id = image->header.frame_id;
+          transform.child_frame_id = "qr_" + barcode;
+          fillTransform(transform.transform, rvec, tvec);
+          br_.sendTransform(transform);
+        } else {
+          NODELET_WARN_THROTTLE(5, "cannot compute transform to qr %s", barcode.c_str());
+        }
+      }
+
       if (publish_debug)
       {
         int pt_count = symbol->get_location_size();

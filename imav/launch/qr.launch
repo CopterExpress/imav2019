@@ -5,6 +5,8 @@
     <!-- qr detector nodelent -->
     <node pkg="nodelet" type="nodelet" name="qr_reader" args="load zbar_ros_redux/qr_reader_nodelet $(arg manager)">
         <param name="throttle_repeated_barcodes" type="double" value="2.0"/>
+        <param name="send_tf" value="true"/>
+        <param name="symbol_size" value="0.2"/>
         <remap from="image_raw" to="$(arg camera)/image_raw"/>
     </node>
 

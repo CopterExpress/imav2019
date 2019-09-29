@@ -38,8 +38,11 @@
 #include "zbar.h"
 #include <unordered_map>
 #include <string>
+#include <vector>
 #include "nodelet/nodelet.h"
 #include <image_transport/image_transport.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_broadcaster.h>
 
 namespace zbar_ros_redux
 {
@@ -51,14 +54,19 @@ namespace zbar_ros_redux
 
   private:
     virtual void onInit();
-    void imageCb(const sensor_msgs::ImageConstPtr &image);
-
+    void parseCameraInfo(const sensor_msgs::CameraInfoConstPtr& cinfo, cv::Mat& matrix, cv::Mat& dist);
+    void imageCb(const sensor_msgs::ImageConstPtr& image, const sensor_msgs::CameraInfoConstPtr &cinfo);
     ros::NodeHandle nh_, private_nh_;
-    image_transport::Subscriber camera_sub_;
+    image_transport::CameraSubscriber camera_sub_;
     image_transport::Publisher debug_pub_;
     ros::Publisher qr_pub_;
     ros::Timer clean_timer_;
     zbar::ImageScanner scanner_;
+    cv::Mat camera_matrix_, dist_coeffs_;
+    double symbol_size_;
+    bool send_tf_;
+    std::vector<cv::Point3f> obj_points_;
+    tf2_ros::TransformBroadcaster br_;
   };
 
 }  // namespace zbar_ros
