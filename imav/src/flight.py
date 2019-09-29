@@ -6,6 +6,10 @@ from clever import srv
 from std_srvs.srv import Trigger
 from zbar_ros_redux.msg import DetectedQr
 
+# Servo interaction
+import serial
+import thread
+
 rospy.init_node('flight')
 
 get_telemetry = rospy.ServiceProxy('get_telemetry', srv.GetTelemetry)
@@ -16,6 +20,21 @@ set_velocity = rospy.ServiceProxy('set_velocity', srv.SetVelocity)
 set_attitude = rospy.ServiceProxy('set_attitude', srv.SetAttitude)
 set_rates = rospy.ServiceProxy('set_rates', srv.SetRates)
 land = rospy.ServiceProxy('land', Trigger)
+
+
+ser = serial.Serial('usb-1a86_USB2.0-Serial-if00-port0', 115200, timeout=10)
+servo_angle = 30
+last_range = -1
+
+
+def _arduino_comms():
+    global last_range, servo_angle
+    while True:
+        last_range = int(ser.readline())
+        ser.write(str(servo_angle))
+
+
+thread.start_new_thread(_arduino_comms, [])
 
 
 def qr_cb(msg):
@@ -47,6 +66,6 @@ def fly_to_shelf():
     print navigate(x=0, y=7.5, z=0, speed=0.5, frame_id='navigate_target')
 
 
-fly_to_shelf()
+#fly_to_shelf()
 
 # rospy.spin()
