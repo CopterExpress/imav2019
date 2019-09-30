@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import os
 
 import rospy
@@ -7,13 +9,13 @@ import glob
 
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-from flag_detector.mag import Flag
-
-image_pub = rospy.Publisher('/line_detection/image', Image, queue_size=1)
-flag_message = rospy.Publisher('/detected_flag', Flag, queue_size=1)
+from flag_detector.msg import Flag
 
 rospy.init_node('flag_detector')
 
+debug_pub = rospy.Publisher('~debug', Image, queue_size=1)
+flag_pub = rospy.Publisher('~flag', Flag, queue_size=1)
+flag_msg = Flag()
 
 method = cv.TM_CCOEFF_NORMED
 threshold = 0.6
@@ -27,41 +29,35 @@ flags = glob.glob("flags/*.png")
 for flag in flags:
     images.append({
         'img': cv.resize(cv.imread(flag), (w, h)),
-        'name': flag
+        'name': flag[6:-4]
     })
 
 
-def detect_image(image):
-    img = image.copy()
+def image_callback(msg):
+    if flag_pub.get_num_connections() == 0 and debug_pub.get_num_connections() == 0:
+        return
+
+    img = bridge.imgmsg_to_cv2(msg, 'bgr8')
+
+    publish_debug = debug_pub.get_num_connections()
+    if publish_debug:
+        debug = img.copy()
 
     for flag in images:
         res = cv.matchTemplate(img, flag['img'], method)
         loc = np.where(res >= threshold)
         for pt in zip(*loc[::-1]):
-            cv.rectangle(image, pt, (pt[0] + w, pt[1] + h), (255, 0, 0), 2)
-            cv.putText(image, flag['name'], pt, cv.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0))
-            flags = Flag(
-                header=''
-                country=''
-            )
-            flag_message.publish()
-            break
+            if debug_pub.get_num_connections():
+                cv.rectangle(debug, pt, (pt[0] + w, pt[1] + h), (255, 0, 0), 2)
+                cv.putText(debug, flag['name'], pt, cv.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0))
+            flag_msg.header.stamp = msg.header.stamp
+            flag_msg.country = flag['name']
+            flag_pub.publish(flag_msg)
 
-    return image
-
-
-def image_callback(data):
-    print('callback')
-    if image_pub.get_num_connections() == 0:
-        return
-    else
-        cv_image = bridge.imgmsg_to_cv2(data, 'bgr8')  # OpenCV image
-
-        img = detect_image(cv_image)
-        image_pub.publish(bridge.cv2_to_imgmsg(img, 'bgr8'))
+    if publish_debug:
+        debug_pub.publish(bridge.cv2_to_imgmsg(img, 'bgr8'))
 
 
-if __name__ == "__main__":
-    print("Subscribe start")
-    image_sub = rospy.Subscriber('main_camera/image_raw', Image, image_callback, queue_size=1)
-    rospy.spin()
+image_sub = rospy.Subscriber('front_camera/image_raw', Image, image_callback, queue_size=1)
+rospy.loginfo('Flag detector: ready')
+rospy.spin()
