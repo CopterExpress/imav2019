@@ -1,0 +1,10 @@
+<launch>
+    <node pkg="text_detector" type="text_detector_node" name="text_detector" output="screen">
+        <param name="model_name" value="$(find text_detector)/data/frozen_east_text_detection.pb"/>
+        <param name="nms_threshold" value="0.4"/>
+        <param name="confidence_threshold" value="0.6"/>
+        <param name="input_width" value="320"/>
+        <param name="input_height" value="320"/>
+    </node>
+
+</launch>

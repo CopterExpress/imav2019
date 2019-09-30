@@ -1,0 +1,11 @@
+<library path="lib/libtext_detector_nodelet">
+
+    <class name="text_detector/TextDetectorNodelet"
+           type="text_detector::TextDetectorNodelet"
+           base_class_type="nodelet::Nodelet">
+        <description>
+            Text Detector Nodelet.
+        </description>
+    </class>
+
+</library>
