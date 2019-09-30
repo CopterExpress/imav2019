@@ -20,6 +20,10 @@ find_package(catkin REQUIRED COMPONENTS
 # find_package(Boost REQUIRED COMPONENTS system)
 
 find_package(OpenCV 3.4 REQUIRED)
+#find_package(Leptonica REQUIRED)
+#find_package(Tesseract REQUIRED)
+find_library(_LEPTONICA_LIB lept)
+find_library(_TESSERACT_LIB tesseract)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -136,6 +140,8 @@ target_include_directories(${PROJECT_NAME}_nodelet PUBLIC
 
 target_link_libraries(${PROJECT_NAME}_nodelet PUBLIC
   ${OpenCV_LIBRARIES}
+  ${_LEPTONICA_LIB}
+  ${_TESSERACT_LIB}
   ${catkin_LIBRARIES}
 )
 

@@ -1,13 +1,13 @@
 <launch>
     <node pkg="image_publisher" type="image_publisher" name="image_publisher"
-          args="$(find text_detector)/data/sample.png">
+          args="$(find text_detector)/data/sample2.png">
         <param name="publish_rate" value="1"/>
     </node>
     <node pkg="text_detector" type="text_detector_node" name="text_detector" output="screen">
         <remap from="image" to="image_publisher/image_raw"/>
         <param name="model_name" value="$(find text_detector)/data/frozen_east_text_detection.pb"/>
-        <param name="nms_threshold" value="0.4"/>
-        <param name="confidence_threshold" value="0.6"/>
+        <param name="nms_threshold" value="0.1"/>
+        <param name="confidence_threshold" value="0.98"/>
         <param name="input_width" value="320"/>
         <param name="input_height" value="320"/>
     </node>
