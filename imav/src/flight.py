@@ -44,13 +44,18 @@ def qr_cb(msg):
 qr_sub = rospy.Subscriber('qr_reader/qr', DetectedQr, qr_cb, queue_size=1,)
 
 
-def navigate_wait(x, y, z, speed, frame_id, tolerance=0.2):
-    navigate(x=x, y=y, z=z, speed=speed, frame_id=frame_id)
+def navigate_wait(x=0, y=0, z=0, speed=0.5, frame_id='', tolerance=0.2, auto_arm=False):
+    res = navigate(x=x, y=y, z=z, speed=speed, frame_id=frame_id, auto_arm=auto_arm)
+    if not res.success:
+        return res
 
     while not rospy.is_shutdown():
         telem = get_telemetry(frame_id='navigate_target')
         if math.sqrt(telem.x ** 2 + telem.y ** 2 + telem.z ** 2) < tolerance:
             break
+        rospy.sleep(0.2)
+
+    return res
 
 
 def takeoff():
