@@ -1,3 +1,3 @@
 Header header
-string text_message
+string text
 geometry_msgs/Point[] bounding_polygon
