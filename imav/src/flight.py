@@ -2,6 +2,7 @@
 
 import math
 import rospy
+import re
 from clever import srv
 from std_srvs.srv import Trigger
 from zbar_ros_redux.msg import DetectedQr
@@ -27,11 +28,12 @@ servo_angle = 30
 last_range = -1
 
 
-def _arduino_comms():
-    global last_range, servo_angle
-    while True:
-        last_range = float(ser.readline())
-        ser.write(str(servo_angle) + '\n')
+# def _arduino_comms():
+#     global last_range, servo_angle
+#     while True:
+#         # last_range = fl/oat(ser.readline())
+#         ser.write(str(servo_angle) + '\n')
+#         rospy.sleep(0.1)
 
 
 def handle(pos):
@@ -48,24 +50,52 @@ def handle(pos):
         raise Exception('incorrect position')
 
 
-thread.start_new_thread(_arduino_comms, ())
+# thread.start_new_thread(_arduino_comms, ())
+
+
+def get_distance(x1, y1, z1, x2, y2, z2):
+    return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2)
+
 
 packages = []
+found_packages = {}
 
 
 def qr_cb(msg):
     if msg.qr_message in packages:
         print '!! found package', msg.qr_message
+        # telem = get_telemetry()
+        # if not msg.qr_message in found_packages:
+        #     found_packages[msg.qr_message] = {}
+        # found_packages[msg.qr_message]['x'] = telem.x
+        # found_packages[msg.qr_message]['y'] = telem.y
+        # found_packages[msg.qr_message]['z'] = telem.z
     else:
         print 'skip package', msg.qr_message
 
 
-qr_sub = rospy.Subscriber('qr_reader/qr', DetectedQr, qr_cb, queue_size=1,)
+
+current_shelf = ''
 
 
-def navigate_wait(x=0, y=0, z=0, speed=0.5, frame_id='', tolerance=0.2, auto_arm=False, timeout=rospy.Duration(0)):
+def shelf_cb(msg):
+    if not current_shelf:
+        return
+    r = re.compile(r'\d{2}' + current_shelf, re.IGNORECASE)
+    if r.match(msg.text):
+        print 'found shelf number %s' % msg.text
+        telem = get_telemetry()
+        for package in packages:
+            details = packages[package]
+            dist = get_distance(telem.x, telem.y, telem.z, details['x'], details['y'], details['z'])
+            if dist < 1:
+                print 'package %s now belongs to shelf %s' % (package, msg.text)
+                details['shelf'] = msg.text
+
+
+def navigate_wait(x=0, y=0, z=0, speed=0.5, frame_id='', yaw=0, tolerance=0.2, auto_arm=False, timeout=rospy.Duration(0)):
     start = rospy.get_rostime()
-    res = navigate(x=x, y=y, z=z, speed=speed, frame_id=frame_id, auto_arm=auto_arm)
+    res = navigate(x=x, y=y, z=z, speed=speed, yaw=yaw, frame_id=frame_id, auto_arm=auto_arm)
     if not res.success:
         return res
 
@@ -77,7 +107,7 @@ def navigate_wait(x=0, y=0, z=0, speed=0.5, frame_id='', tolerance=0.2, auto_arm
         if timeout and ((rospy.get_rostime() - start) > timeout):
             print 'navigating timeout'
             break
-        rospy.sleep(0.2)
+        rospy.sleep(0.1)
 
     return res
 
@@ -97,13 +127,19 @@ def takeoff():
 def scan():
     print 'start scanning'
     print 'go left'
-    navigate_wait(x=0, y=4.5, z=0, speed=0.3, frame_id='navigate_target')
+    navigate_wait(x=0, y=4.7, z=0, speed=0.3, frame_id='navigate_target')
     print 'go up'
     navigate_wait(x=0, y=0, z=2, speed=0.3, frame_id='navigate_target')
+
+    wait_aruco(122)
+    navigate_wait(x=0, y=0, z=2.5, speed=0.3, frame_id='aruco_122')
+
     print 'go right'
     navigate_wait(x=0, y=-4.5, z=0, speed=0.3, frame_id='navigate_target')
+
     wait_aruco(120)
     navigate_wait(x=0, y=0, z=2.5, speed=0.3, frame_id='aruco_120')
+
     print 'fly through window'
     navigate_wait(x=3, y=0, z=0, speed=0.5, frame_id='navigate_target')
 
@@ -128,10 +164,13 @@ def wait_aruco(_id):
 
 def pick_payload():
     handle('down')
-    wait_aruco(3)
-    navigate_wait(x=0, y=0, z=1, speed=0.3, frame_id='aruco_3')
+    wait_aruco(45)
+    navigate_wait(x=0, y=0, z=0.91, speed=0.3, yaw=math.pi, frame_id='aruco_45', tolerance=0.1)
     print 'backwards!'
-    navigate_wait(x=-1, speed=1, frame_id='navigate_target')
+    navigate(x=-0.7, speed=1.4, frame_id='navigate_target')
+    rospy.sleep(2)
+    navigate(z=0.2, speed=0.5, frame_id='navigate_target')
+    handle('keep')
 
 
 def land_to_target():
@@ -146,6 +185,8 @@ def mission():
     print 'takeoff'
     print navigate_wait(z=1.5, speed=1, frame_id='body', auto_arm=True, timeout=rospy.Duration(5))
 
+    print navigate_wait(y=-1, speed=0.5, frame_id='navigate_target', timeout=rospy.Duration(2))
+
     fly_to_shelf()
 
     print 'search for marker'
@@ -159,11 +200,24 @@ def mission():
     print 'fly down'
     navigate_wait(x=0, y=0, z=-0.3, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(1))
 
+    global current_shelf
+    current_shelf = 'A'
+    qr_sub = rospy.Subscriber('qr_reader/qr', DetectedQr, qr_cb, queue_size=1)
+
     scan()
+
+    qr_sub.unregister()
 
 
 packages = read_csv()
 print 'got packages', packages
+
+# ensure get_telemetry works
+print get_telemetry()
+
+# print 'takeoff'
+# print navigate_wait(z=1.5, speed=1, frame_id='body', auto_arm=True, timeout=rospy.Duration(5))
+# pick_payload()
 
 # print 'take off'
 # takeoff()
