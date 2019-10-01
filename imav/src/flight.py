@@ -97,6 +97,7 @@ def navigate_wait(x=0, y=0, z=0, speed=0.5, frame_id='', yaw=0, tolerance=0.2, a
     start = rospy.get_rostime()
     res = navigate(x=x, y=y, z=z, speed=speed, yaw=yaw, frame_id=frame_id, auto_arm=auto_arm)
     if not res.success:
+        print res
         return res
 
     while not rospy.is_shutdown():
