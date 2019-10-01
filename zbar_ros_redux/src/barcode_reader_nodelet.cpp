@@ -79,6 +79,12 @@ namespace zbar_ros_redux
     private_nh_.param("send_tf", send_tf_, false);
     private_nh_.param("symbol_size", symbol_size_, 0.2);
 
+    int x_stride = private_nh_.param("zbar_x_stride", 2);
+    int y_stride = private_nh_.param("zbar_y_stride", 2);
+
+    scanner_.set_config(zbar::ZBAR_QRCODE, zbar::ZBAR_CFG_X_DENSITY, x_stride);
+    scanner_.set_config(zbar::ZBAR_QRCODE, zbar::ZBAR_CFG_Y_DENSITY, y_stride);
+
     if (send_tf_)
     {
       obj_points_.push_back(cv::Point3f(0, 0, 0));

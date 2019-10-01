@@ -14,6 +14,8 @@
 
     <node pkg="zbar_ros_redux" type="qr_reader_node" name="qr_reader">
         <remap from="image_raw" to="cv_camera/image_raw"/>
+        <param name="x_stride" value="2"/>
+        <param name="y_stride" value="2"/>
     </node>
 
 </launch>
