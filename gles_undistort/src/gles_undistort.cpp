@@ -38,18 +38,17 @@ private:
 
     ros::NodeHandle nh_, nh_priv_;
 
-    image_transport::Publisher fbo_pub_;
+    image_transport::CameraPublisher fbo_pub_;
     image_transport::CameraSubscriber cam_sub_;
 
     int mesh_subdiv_x_;
     int mesh_subdiv_y_;
 
+    sensor_msgs::CameraInfoPtr camera_info_;
+
     ros::Timer timer_;
 public:
-    Undistorter()
-    {
-        
-    }
+    Undistorter() {}
     void onInit()
     {
         nh_ = getNodeHandle();
@@ -62,7 +61,9 @@ public:
         mesh_subdiv_x_ = nh_priv_.param("subdiv_x", 40);
         mesh_subdiv_y_ = nh_priv_.param("subdiv_y", 30);
 
-        fbo_pub_ = it_priv_.advertise("image_rect", 1);
+        camera_info_ = boost::make_shared<sensor_msgs::CameraInfo>();
+
+        fbo_pub_ = it_priv_.advertiseCamera("image_rect", 1);
 
         cam_sub_ = it_.subscribeCamera("image_raw", 1, &Undistorter::cameraCallback, this);
     }
@@ -124,7 +125,21 @@ public:
         img.header.frame_id = "body";
         img.header.stamp = ros::Time::now();
 
-        fbo_pub_.publish(img.toImageMsg());
+        // Create new camera_info message without distortion
+        camera_info_->header.frame_id = cameraInfo->header.frame_id;
+        camera_info_->header.stamp = cameraInfo->header.stamp;
+        camera_info_->width = cameraInfo->width;
+        camera_info_->height = cameraInfo->height;
+        camera_info_->K = cameraInfo->K;
+        camera_info_->D = std::vector<double>(5);
+        camera_info_->P = cameraInfo->P;
+        camera_info_->R = cameraInfo->R;
+        camera_info_->distortion_model = cameraInfo->distortion_model;
+        camera_info_->binning_x = cameraInfo->binning_x;
+        camera_info_->binning_y = cameraInfo->binning_y;
+        camera_info_->roi = cameraInfo->roi;
+
+        fbo_pub_.publish(img.toImageMsg(), camera_info_);
     }
 
     static void render(const Gfx::GpuMesh& mesh, const Gfx::Shader& shader, GLuint texture)
