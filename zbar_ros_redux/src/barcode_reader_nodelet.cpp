@@ -112,8 +112,8 @@ namespace zbar_ros_redux
 
   void BarcodeReaderNodelet::imageCb(const sensor_msgs::ImageConstPtr& image, const sensor_msgs::CameraInfoConstPtr &cinfo)
   {
-    bool publish_debug = debug_pub_.getNumSubscribers() > 0;
-    bool has_subscribers = (qr_pub_.getNumSubscribers() > 0) || publish_debug;
+    bool has_subscribers = (qr_pub_.getNumSubscribers() > 0);
+    bool publish_debug = has_subscribers;
     if (!has_subscribers)
     {
       return;
