@@ -112,11 +112,11 @@ def navigate_wait(x=0, y=0, z=0, speed=0.5, frame_id='', yaw=0, tolerance=0.2, a
     return res
 
 
-def read_csv():
+def read_csv(index):
     import csv
-    with open('packages.csv') as csvfile:
+    with open('packages_demo.csv') as csvfile:
         reader = csv.reader(csvfile)
-        return list(row[0] for row in reader)
+        return list(reader)[5][1:]
 
 
 def takeoff():
