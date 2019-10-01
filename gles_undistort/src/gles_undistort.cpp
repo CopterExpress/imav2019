@@ -123,7 +123,7 @@ public:
         img.image = gl_image;
         img.encoding = "bgra8";
         img.header.frame_id = "body";
-        img.header.stamp = ros::Time::now();
+        img.header.stamp = src->header.stamp;
 
         // Create new camera_info message without distortion
         camera_info_->header.frame_id = cameraInfo->header.frame_id;
