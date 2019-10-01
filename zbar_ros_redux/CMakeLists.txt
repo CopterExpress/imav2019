@@ -10,6 +10,8 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
   image_transport
+  tf2
+  tf2_ros
 )
 
 add_message_files(
