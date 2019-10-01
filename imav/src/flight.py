@@ -343,7 +343,7 @@ def fly_to_shelf():
     navigate_wait(x=4, y=0, z=0, speed=0.5, frame_id='navigate_target', timeout=rospy.Duration(8))
     print 'adjust yaw'
     navigate(x=0, y=0, z=0, yaw=math.pi, speed=0.5, frame_id='navigate_target')
-    rospy.sleep(3)
+    rospy.sleep(6) # TODO: 6?
 
 
 def pick_payload():
@@ -359,8 +359,8 @@ def pick_payload():
 
 def land_to_target():
     wait_aruco(3)
-    navigate_wait(x=0, y=0, z=1, speed=0.3, frame_id='aruco_3')
-    land()
+    navigate_wait(x=0, y=0, z=0.6, speed=0.3, frame_id='aruco_3')
+    land() # TODO: check landing params
 
 
 def scan_line_a():
@@ -374,7 +374,7 @@ def scan_line_a():
     print 'fly down'
     navigate_wait(x=0, y=0, z=-0.45, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(5))
 
-    scan_up(current_z=1, aruco=105)
+    scan_up(current_z=0.55, aruco=105)
     fly_to_next()
     scan_down()
     fly_to_next()
@@ -394,13 +394,18 @@ def scan_line_b():
     print 'fly down'
     navigate_wait(x=0, y=0, z=-0.45, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(5))
 
-    scan_up(current_z=1, aruco=108)
+    scan_up(current_z=0.55, aruco=108)
     fly_to_next()
     scan_down()
     fly_to_next()
     scan_up()
     fly_to_next()
     scan_down(aruco=109)
+
+
+def flying_through_shelf(aruco=None):
+    # TODO 
+    pass
 
 
 def mission():
@@ -422,7 +427,7 @@ def mission():
     navigate_wait(x=0, y=0, z=1, speed=0.3, frame_id='aruco_120')
 
     print 'fly down'
-    navigate_wait(x=0, y=0, z=-0.3, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(1))
+    navigate_wait(x=0, y=0, z=-0.45, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(1))
 
     global current_line
     current_line = 'A'
