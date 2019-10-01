@@ -182,11 +182,11 @@ namespace zbar_ros_redux
       if (publish_debug)
       {
         int pt_count = symbol->get_location_size();
-        cv::Point2d centroid;
+        cv::Point2i centroid;
         for(int i = 0; i < pt_count; ++i)
         {
-          cv::Point2d prev_point{symbol->get_location_x(i), symbol->get_location_y(i)};
-          cv::Point2d cur_point{symbol->get_location_x((i + 1) % pt_count), symbol->get_location_y((i + 1) % pt_count)};
+          cv::Point2i prev_point{symbol->get_location_x(i), symbol->get_location_y(i)};
+          cv::Point2i cur_point{symbol->get_location_x((i + 1) % pt_count), symbol->get_location_y((i + 1) % pt_count)};
           cv::line(debug_image->image, prev_point, cur_point, cv::Scalar(0, 255, 0));
           centroid += prev_point;
         }
