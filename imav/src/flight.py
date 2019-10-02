@@ -232,6 +232,8 @@ DEADZONE_LOWER_Z = 1.35
 DEADZONE_UPPER_Z = 1.9
 UPPER_Z = 3.5
 
+BETWEEN_SHELVES = 1.6
+
 
 def scan_up(current_z=LOWER_Z, aruco=None):
     global current_shelf, shelf_search_enabled, package_search_enabled
@@ -296,7 +298,7 @@ def scan_down(aruco=None):
 
 
 def fly_to_next():
-    navigate_wait(y=1.4, speed=0.3, frame_id='navigate_target')  # TODO: y?
+    navigate_wait(y=BETWEEN_SHELVES, speed=0.3, frame_id='navigate_target')  # TODO: y?
 
 
 # def scan2():
@@ -374,8 +376,8 @@ def pick_payload():
 
 
 def land_to_target():
-    wait_aruco(3)
-    navigate_wait(x=0, y=0, z=0.6, speed=0.3, frame_id='aruco_3')
+    wait_aruco(142)
+    navigate_wait(x=0, y=0, z=0.6, speed=0.3, frame_id='aruco_142')
     land() # TODO: check landing params
 
 
@@ -419,9 +421,12 @@ def scan_line_b():
     scan_down(aruco=109)
 
 
-def flying_through_shelf(aruco=None):
-    # TODO
-    pass
+def fly_through_shelf(aruco, count_right=0, up=0, z=2.7, dist_window=3):
+    navigate_and_wait_aruco(_id=aruco, y=-count_right*BETWEEN_SHELVES, z=up, speed=-0.5, frame_id='navigate_target', timeout=rospy.Duration(15))
+    navigate_wait(z=z, frame_id='aruco'+str(aruco), timeout=rospy.Duration(15))
+
+    print 'fly through window'
+    navigate_wait(x=dist_window, y=0, z=0, speed=0.8, frame_id='navigate_target')
 
 
 def mission():
