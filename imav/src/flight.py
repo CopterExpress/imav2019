@@ -143,9 +143,20 @@ shelf_search_enabled = False
 package_search_enabled = False
 
 
+# for testing
+# found_packages = {'Y864H': {'shelf':1}, 'C933S': {'shelf':2}, 'G853F': {'shelf':5}}
+# found_shelves = {1: {'code':'A21'}, 5: {'code':'A24'}}
+
+
 def print_current_search_results():
-    print found_packages
-    print found_shelves
+    print 'packages', found_packages
+    print 'shelves', found_shelves
+    for package in found_packages:
+        shelf = found_packages[package]['shelf']
+        if shelf in found_shelves:
+            print '=== package:', package, 'shelf: ', found_shelves[shelf]['code'], '==='
+        else:
+            print '=== package:', package, 'shelf: ', shelf, '==='
 
 
 def is_shelf_id(text):
@@ -156,19 +167,24 @@ def is_shelf_id(text):
 
 def qr_cb(msg):
     if is_shelf_id(msg.qr_message):
-        # if current_shelf in found_shelves:
-        #     # set the next shelf
-        #     print 'found next shelf code', current_shelf+1, msg.qr_message
-        #     found_shelves[current_shelf+1] = {'code': msg.qr_message}
-        # else:
-        if current_shelf not in found_shelves:
-            print 'found shelf code', current_shelf, msg.qr_message
-            found_shelves[current_shelf] = {'code': msg.qr_message}
+        if shelf_search_enabled:
+            # if current_shelf in found_shelves:
+            #     # set the next shelf
+            #     print 'found next shelf code', current_shelf+1, msg.qr_message
+            #     found_shelves[current_shelf+1] = {'code': msg.qr_message}
+            # else:
+            if current_shelf not in found_shelves:
+                print 'found shelf code', current_shelf, msg.qr_message
+                found_shelves[current_shelf] = {'code': msg.qr_message}
+
+                print_current_search_results()
 
     elif msg.qr_message in packages:
         if package_search_enabled:
             print '!!! found package: ', msg.qr_message, 'shelf: ', current_shelf
             found_packages[msg.qr_message] = {'shelf': current_shelf}
+
+            print_current_search_results()
         else:
             print 'found package: ', msg.qr_message, 'search disabled'
 
@@ -215,6 +231,8 @@ LOWER_Z = .55
 DEADZONE_LOWER_Z = 1.35
 DEADZONE_UPPER_Z = 1.9
 UPPER_Z = 3.5
+
+BETWEEN_SHELVES = 1.6
 
 
 def scan_up(current_z=LOWER_Z, aruco=None):
@@ -280,7 +298,7 @@ def scan_down(aruco=None):
 
 
 def fly_to_next():
-    navigate_wait(y=1.4, speed=0.3, frame_id='navigate_target')  # TODO: y?
+    navigate_wait(y=BETWEEN_SHELVES, speed=0.3, frame_id='navigate_target')  # TODO: y?
 
 
 # def scan2():
@@ -358,8 +376,8 @@ def pick_payload():
 
 
 def land_to_target():
-    wait_aruco(3)
-    navigate_wait(x=0, y=0, z=0.6, speed=0.3, frame_id='aruco_3')
+    wait_aruco(142)
+    navigate_wait(x=0, y=0, z=0.6, speed=0.3, frame_id='aruco_142')
     land() # TODO: check landing params
 
 
@@ -403,9 +421,12 @@ def scan_line_b():
     scan_down(aruco=109)
 
 
-def flying_through_shelf(aruco=None):
-    # TODO 
-    pass
+def fly_through_shelf(aruco, count_right=0, up=0, z=2.7, dist_window=3):
+    navigate_and_wait_aruco(_id=aruco, y=-count_right*BETWEEN_SHELVES, z=up, speed=-0.5, frame_id='navigate_target', timeout=rospy.Duration(15))
+    navigate_wait(z=z, frame_id='aruco'+str(aruco), timeout=rospy.Duration(15))
+
+    print 'fly through window'
+    navigate_wait(x=dist_window, y=0, z=0, speed=0.8, frame_id='navigate_target')
 
 
 def mission():
