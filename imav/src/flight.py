@@ -361,7 +361,7 @@ def fly_to_shelf():
     navigate_wait(x=4, y=0, z=0, speed=0.5, frame_id='navigate_target', timeout=rospy.Duration(8))
     print 'adjust yaw'
     navigate(x=0, y=0, z=0, yaw=math.pi, speed=0.5, frame_id='navigate_target')
-    rospy.sleep(6) # TODO: 6?
+    rospy.sleep(5)
 
 
 def pick_payload():
@@ -422,14 +422,14 @@ def scan_line_b():
 
 
 def fly_through_shelf(aruco, count_right=0, up=0, z=2.7, dist_window=3):
-    navigate_and_wait_aruco(_id=aruco, y=-count_right*BETWEEN_SHELVES, z=up, speed=-0.5, frame_id='navigate_target', timeout=rospy.Duration(15))
+    navigate_and_wait_aruco(_id=aruco, y=-count_right*BETWEEN_SHELVES, z=up, speed=-0.2, frame_id='navigate_target', timeout=rospy.Duration(15))
     navigate_wait(z=z, frame_id='aruco'+str(aruco), timeout=rospy.Duration(15))
 
     print 'fly through window'
     navigate_wait(x=dist_window, y=0, z=0, speed=0.8, frame_id='navigate_target')
 
 
-def mission():
+def _mission():
     handle('back')
 
     print 'takeoff'
@@ -457,6 +457,41 @@ def mission():
     scan()
 
     qr_sub.unregister()
+
+
+def mission():
+    print 'takeoff'
+    print navigate_wait(z=1.5, speed=1, frame_id='body', auto_arm=True, timeout=rospy.Duration(5))
+
+    print 'fly over the flag'
+    print navigate_wait(y=-1, speed=0.5, frame_id='navigate_target', timeout=rospy.Duration(2))
+
+    fly_to_shelf()
+
+    print 'start scanning qr'
+    qr_sub = rospy.Subscriber('qr_reader/qr', DetectedQr, qr_cb, queue_size=1)
+
+    scan_line_a()
+
+    fly_through_shelf(aruco=107)  # TODO: count_right
+
+    scan_line_b()
+
+    print 'stop scanning qr'
+    qr_sub.unregister()
+
+    fly_through_shelf(aruco=110)  # TODO: count_right
+
+    print 'fly right to landing'
+    count_to_landing = 1
+    # TODO: dist right
+    navigate_and_wait_aruco(_id=111, y=-count_to_landing*BETWEEN_SHELVES, speed=-0.3, frame_id='navigate_target', timeout=rospy.Duration(10))
+
+    print 'fly to landing'
+    # TODO: dist forward
+    navigate_and_wait_aruco(_id=142, x=4, speed=-0.5, frame_id='navigate_target', timeout=rospy.Duration(10))
+    navigate_wait(x=0, y=0, z=0.5, speed=0.2, frame_id='aruco_142', tolerance=0.12)
+    land()
 
 
 packages = read_csv(5)
