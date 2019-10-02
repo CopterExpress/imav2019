@@ -89,8 +89,10 @@ public:
             // FIXME: This does not react to changes
             tex_ = Gfx::createTexture(src->width, src->height, nullptr);
 
+            NODELET_INFO("Creating regular mesh");
             // FIXME: Add vertices count as parameter
             Gfx::Mesh origMesh = Gfx::createRegularMesh(mesh_subdiv_x_, mesh_subdiv_y_, src->width, src->height);
+            NODELET_INFO("Creating undistortion mesh");
             Gfx::Mesh undistMesh = Gfx::createUndistortedMesh(origMesh, cameraInfo);
 
             // Normalize vertex positions to [-1, 1] on both axes
@@ -99,9 +101,14 @@ public:
                 vtx.vpos[0] = (2.0f * vtx.vpos[0] / src->width) - 1.0f;
                 vtx.vpos[1] = (2.0f * vtx.vpos[1] / src->height) - 1.0f;
             }
-
+            NODELET_INFO("Uploading mesh to GPU");
             mesh_ = Gfx::uploadMesh(undistMesh);
             shader_.init().addStage(GL_VERTEX_SHADER, Gfx::Shaders::undistortVertexShader).addStage(GL_FRAGMENT_SHADER, Gfx::Shaders::undistortFragmentShader).link();
+        }
+        if (ecs_.context != eglGetCurrentContext())
+        {
+            NODELET_ERROR("Callback called from a different thread, cannot use current EGL context");
+            return;
         }
 
         const auto src_image = cv_bridge::toCvShare(src, "bgra8");
