@@ -6,6 +6,7 @@ import re
 from clever import srv
 from std_srvs.srv import Trigger
 from zbar_ros_redux.msg import DetectedQr
+from flag_detector.msg import Flag
 
 # Servo interaction
 import serial
@@ -190,6 +191,10 @@ def qr_cb(msg):
 
     else:
         print 'skip package', msg.qr_message
+
+
+def flag_cb(msg):
+    print 'flag', msg.country
 
 
 def read_csv(index):
@@ -457,6 +462,9 @@ def _mission():
     scan()
 
     qr_sub.unregister()
+
+
+# flag_sub = rospy.Subscriber('flag_detector/flag', Flag, flag_cb, queue_size=1)
 
 
 def mission():
