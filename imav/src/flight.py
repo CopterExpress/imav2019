@@ -143,9 +143,20 @@ shelf_search_enabled = False
 package_search_enabled = False
 
 
+# for testing
+# found_packages = {'Y864H': {'shelf':1}, 'C933S': {'shelf':2}, 'G853F': {'shelf':5}}
+# found_shelves = {1: {'code':'A21'}, 5: {'code':'A24'}}
+
+
 def print_current_search_results():
-    print found_packages
-    print found_shelves
+    print 'packages', found_packages
+    print 'shelves', found_shelves
+    for package in found_packages:
+        shelf = found_packages[package]['shelf']
+        if shelf in found_shelves:
+            print '=== package:', package, 'shelf: ', found_shelves[shelf]['code'], '==='
+        else:
+            print '=== package:', package, 'shelf: ', shelf, '==='
 
 
 def is_shelf_id(text):
@@ -156,19 +167,24 @@ def is_shelf_id(text):
 
 def qr_cb(msg):
     if is_shelf_id(msg.qr_message):
-        # if current_shelf in found_shelves:
-        #     # set the next shelf
-        #     print 'found next shelf code', current_shelf+1, msg.qr_message
-        #     found_shelves[current_shelf+1] = {'code': msg.qr_message}
-        # else:
-        if current_shelf not in found_shelves:
-            print 'found shelf code', current_shelf, msg.qr_message
-            found_shelves[current_shelf] = {'code': msg.qr_message}
+        if shelf_search_enabled:
+            # if current_shelf in found_shelves:
+            #     # set the next shelf
+            #     print 'found next shelf code', current_shelf+1, msg.qr_message
+            #     found_shelves[current_shelf+1] = {'code': msg.qr_message}
+            # else:
+            if current_shelf not in found_shelves:
+                print 'found shelf code', current_shelf, msg.qr_message
+                found_shelves[current_shelf] = {'code': msg.qr_message}
+
+                print_current_search_results()
 
     elif msg.qr_message in packages:
         if package_search_enabled:
             print '!!! found package: ', msg.qr_message, 'shelf: ', current_shelf
             found_packages[msg.qr_message] = {'shelf': current_shelf}
+
+            print_current_search_results()
         else:
             print 'found package: ', msg.qr_message, 'search disabled'
 
@@ -404,7 +420,7 @@ def scan_line_b():
 
 
 def flying_through_shelf(aruco=None):
-    # TODO 
+    # TODO
     pass
 
 
