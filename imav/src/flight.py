@@ -438,7 +438,7 @@ def scan_line_b():
     current_line = 'A'
 
     print 'start scanning'
-    navigate_and_wait_aruco(_id=108, y=-6, speed=0.3, frame_id='navigate_target')
+    navigate_and_wait_aruco(_id=108, y=-3*BETWEEN_SHELVES, speed=0.3, frame_id='navigate_target')
     navigate_wait(x=0, y=0, z=1, speed=0.3, frame_id='aruco_108')
 
     print 'fly down'
@@ -521,19 +521,18 @@ def mission():
 
     scan_line_a()
 
-    fly_through_shelf(aruco=107, z=2.7, up=2.15)  # TODO: count_right, z
+    fly_through_shelf(aruco=107, z=2.8, up=2.15, count_right=1)  # TODO: count_right, z
 
     scan_line_b()
 
     print 'stop scanning qr'
     qr_sub.unregister()
 
-    fly_through_shelf(aruco=110, up=2.15, z=2.7)  # TODO: count_right, z
+    fly_through_shelf(aruco=110, up=1.5, count_right=2, z=1.2)  # TODO: count_right, z
 
     print 'fly right to landing'
-    count_to_landing = 4 # TODO:
     # TODO: dist right
-    navigate_and_wait_aruco(_id=111, y=-count_to_landing*BETWEEN_SHELVES, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(10))
+    navigate_and_wait_aruco(_id=111, y=-1, z=1, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(10))
 
     print 'go down marker'
     navigate_wait(z=2.2, speed=0.5, frame_id='aruco_111', timeout=rospy.Duration(10))
