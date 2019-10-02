@@ -59,44 +59,44 @@ def get_distance(x1, y1, z1, x2, y2, z2):
 
 packages = []
 found_packages = {}
+found_shelves = {}
 
 
-def qr_cb(msg):
-    if msg.qr_message in packages:
-        print '!! found package', msg.qr_message
-        # telem = get_telemetry()
-        # if not msg.qr_message in found_packages:
-        #     found_packages[msg.qr_message] = {}
-        # found_packages[msg.qr_message]['x'] = telem.x
-        # found_packages[msg.qr_message]['y'] = telem.y
-        # found_packages[msg.qr_message]['z'] = telem.z
-    else:
-        print 'skip package', msg.qr_message
+# def save_shelve(name, qr=True):
+#     print 'Found shelve', name
+#     if not name in found_shelves:
+#         found_shelves[name] = {}
+#     try:
+#         telem = get_telemetry()
+#         found_shelves[name]['x'] = telem.x
+#         found_shelves[name]['y'] = telem.y
+#         found_shelves[name]['z'] = telem.z
+#     except Exception as e:
+#         print e
 
 
-
-current_shelf = ''
-
-
-def shelf_cb(msg):
-    if not current_shelf:
-        return
-    r = re.compile(r'\d{2}' + current_shelf, re.IGNORECASE)
-    if r.match(msg.text):
-        print 'found shelf number %s' % msg.text
-        telem = get_telemetry()
-        for package in packages:
-            details = packages[package]
-            dist = get_distance(telem.x, telem.y, telem.z, details['x'], details['y'], details['z'])
-            if dist < 1:
-                print 'package %s now belongs to shelf %s' % (package, msg.text)
-                details['shelf'] = msg.text
+# def qr_cb(msg):
+#     if msg.qr_message in packages:
+#         print '!!! found package: ', msg.qr_message
+#         try:
+#             telem = get_telemetry()
+#             if not msg.qr_message in found_packages:
+#                 found_packages[msg.qr_message] = {}
+#             found_packages[msg.qr_message]['x'] = telem.x
+#             found_packages[msg.qr_message]['y'] = telem.y
+#             found_packages[msg.qr_message]['z'] = telem.z
+#             print found_packages
+#         except Exception as e:
+#             print e
+#     else:
+#         print 'skip package', msg.qr_message
 
 
 def navigate_wait(x=0, y=0, z=0, speed=0.5, frame_id='', yaw=0, tolerance=0.2, auto_arm=False, timeout=rospy.Duration(0)):
     start = rospy.get_rostime()
     res = navigate(x=x, y=y, z=z, speed=speed, yaw=yaw, frame_id=frame_id, auto_arm=auto_arm)
     if not res.success:
+        print res
         return res
 
     while not rospy.is_shutdown():
@@ -112,11 +112,75 @@ def navigate_wait(x=0, y=0, z=0, speed=0.5, frame_id='', yaw=0, tolerance=0.2, a
     return res
 
 
-def read_csv():
+def wait_aruco(_id, timeout=rospy.Duration(0)):
+    print 'wait aruco %d' % _id
+    start = rospy.get_rostime()
+    while not rospy.is_shutdown():
+        telem = get_telemetry('aruco_%d' % _id)
+        if not math.isnan(telem.x):
+            print 'got aruco %d' % _id
+            break
+        if timeout and ((rospy.get_rostime() - start) > timeout):
+            print 'wait aruco %d timeout' % _id
+            break
+        rospy.sleep(0.2)
+
+
+def navigate_and_wait_aruco(_id, x=0, y=0, z=0, yaw=0, speed=0.5, frame_id='', timeout=rospy.Duration(0)):
+    print 'navigate and wait for aruco %d' % _id
+    res = navigate(x=x, y=y, z=z, speed=speed, yaw=yaw, frame_id=frame_id)
+    if not res.success:
+        print res
+        return res
+    wait_aruco(_id=_id, timeout=timeout)
+    return res
+
+
+current_line = ''
+current_shelf = 0
+
+shelf_search_enabled = False
+package_search_enabled = False
+
+
+def print_current_search_results():
+    print found_packages
+    print found_shelves
+
+
+def is_shelf_id(text):
+    r = re.compile(r'\d{2}' + current_line, re.IGNORECASE)
+    if r.match(text):
+        return True
+
+
+def qr_cb(msg):
+    if is_shelf_id(msg.qr_message):
+        # if current_shelf in found_shelves:
+        #     # set the next shelf
+        #     print 'found next shelf code', current_shelf+1, msg.qr_message
+        #     found_shelves[current_shelf+1] = {'code': msg.qr_message}
+        # else:
+        if current_shelf not in found_shelves:
+            print 'found shelf code', current_shelf, msg.qr_message
+            found_shelves[current_shelf] = {'code': msg.qr_message}
+
+    elif msg.qr_message in packages:
+        if package_search_enabled:
+            print '!!! found package: ', msg.qr_message, 'shelf: ', current_shelf
+            found_packages[msg.qr_message] = {'shelf': current_shelf}
+        else:
+            print 'found package: ', msg.qr_message, 'search disabled'
+
+    else:
+        print 'skip package', msg.qr_message
+
+
+def read_csv(index):
     import csv
-    with open('packages.csv') as csvfile:
+    with open('packages_demo.csv') as csvfile:
         reader = csv.reader(csvfile)
-        return list(row[0] for row in reader)
+        return list(reader)[5][1:]
 
 
 def takeoff():
@@ -125,6 +189,9 @@ def takeoff():
 
 
 def scan():
+    global current_line
+    current_line = 'A'
+
     print 'start scanning'
     print 'go left'
     navigate_wait(x=0, y=4.7, z=0, speed=0.3, frame_id='navigate_target')
@@ -144,22 +211,139 @@ def scan():
     navigate_wait(x=3, y=0, z=0, speed=0.5, frame_id='navigate_target')
 
 
+LOWER_Z = .55
+DEADZONE_LOWER_Z = 1.35
+DEADZONE_UPPER_Z = 1.9
+UPPER_Z = 3.5
+
+
+def scan_up(current_z=LOWER_Z, aruco=None):
+    global current_shelf, shelf_search_enabled, package_search_enabled
+
+    current_shelf += 1
+
+    print 'fly to lower z'
+    navigate_wait(z=LOWER_Z-current_z, speed=0.3, frame_id='navigate_target')
+
+    shelf_search_enabled = True
+    package_search_enabled = True
+
+    print 'fly to deadzone lower z'
+    navigate_wait(z=DEADZONE_LOWER_Z-LOWER_Z, speed=0.3, frame_id='navigate_target')
+
+    package_search_enabled = False
+    current_shelf += 1
+
+    print 'fly to deadzone upper z'
+    navigate_wait(z=DEADZONE_UPPER_Z-DEADZONE_LOWER_Z, speed=0.3, frame_id='navigate_target')
+
+    package_search_enabled = True
+
+    print 'fly to upper z'
+    if aruco:
+        navigate_and_wait_aruco(_id=aruco, z=UPPER_Z-DEADZONE_UPPER_Z, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(8))
+        navigate_wait(z=UPPER_Z, speed=0.3, frame_id='aruco_'+str(aruco), timeout=rospy.Duration(5))
+    else:
+        navigate_wait(z=UPPER_Z-DEADZONE_UPPER_Z, speed=0.3, frame_id='navigate_target')
+
+    package_search_enabled = False
+    shelf_search_enabled = False
+
+
+def scan_down(aruco=None):
+    global current_shelf, shelf_search_enabled, package_search_enabled
+
+    current_shelf += 1
+
+    if aruco:
+        navigate_wait(x=0, y=0, z=UPPER_Z, speed=0.3, frame_id='aruco_' + str(aruco), timeout=rospy.Duration(5))
+
+    package_search_enabled = True
+    shelf_search_enabled = True
+
+    print 'fly to deadzone upper z'
+    navigate_wait(z=DEADZONE_UPPER_Z-UPPER_Z, speed=0.3, frame_id='navigate_target')
+
+    package_search_enabled = False
+
+    print 'fly to deadzone lower z'
+    navigate_wait(z=DEADZONE_LOWER_Z-DEADZONE_UPPER_Z, speed=0.3, frame_id='navigate_target')
+
+    current_shelf += 1
+    package_search_enabled = True
+
+    print 'fly to lower z'
+    navigate_wait(z=LOWER_Z-DEADZONE_LOWER_Z, speed=0.3, frame_id='navigate_target')
+
+    shelf_search_enabled = False
+    package_search_enabled = False
+
+
+def fly_to_next():
+    navigate_wait(y=1.4, speed=0.3, frame_id='navigate_target')  # TODO: y?
+
+
+# def scan2():
+#     global current_line, current_shelf
+#     current_line = 'A'
+#     current_shelf = 0
+
+#     print 'start scanning'
+#     navigate_and_wait_aruco(_id=105, y=4, speed=0.3, frame_id='navigate_target')
+#     navigate_wait(x=0, y=0, z=1, speed=0.3, frame_id='aruco_105')
+
+#     print 'fly down'
+#     navigate_wait(x=0, y=0, z=-0.45, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(5))
+
+#     # TODO: enable QR package shelf 1
+#     # TODO: enable QR shelf 1
+
+#     print 'fly up'
+#     navigate_wait(x=0, y=0, z=0.86, speed=0.3, frame_id='navigate_target')
+
+#     # TODO: disable QR package shelf 1
+#     # TODO: enable QR shelf 2
+
+#     print 'fly up dead zone'
+#     navigate_wait(z=0.5, speed=0.3, frame_id='navigate_target')
+
+#     # TODO: enable QR package shelf 2
+
+#     navigate_and_wait_aruco(_id=105, z=1.60, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(10))
+#     navigate_wait(z=3.50, speed=0.3, frame_id='aruco_105', timeout=rospy.Duration(5))
+
+#     # TODO: disable QR package shelf 2
+#     # TODO: disable QR shelf 2
+
+#     # ======================== NEXT SHELF ========================
+#     navigate_wait(y=1.4, speed=0.3, frame_id='navigate_target')  # TODO: y?
+
+#     # TODO: enable QR package shelf 3
+#     # TODO: enable QR shelf 3
+
+#     navigate_wait(x=0, y=0, z=-1.6, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(10))
+
+#     # TODO: disable QR package shelf 3
+
+#     print 'fly down dead zone'
+#     navigate_wait(z=-0.5, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(10))
+
+#     # TODO: disable QR shelf 3
+#     # TODO: enable QR shelf 4
+#     # TODO: enable QR package shelf 4
+
+#     navigate_wait(z=-0.86, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(10))
+
+#     # TODO: disable QR shelf 4
+#     # TODO: disable QR package shelf 4
+
+
 def fly_to_shelf():
     print 'fly to shelf'
     navigate_wait(x=4, y=0, z=0, speed=0.5, frame_id='navigate_target', timeout=rospy.Duration(8))
     print 'adjust yaw'
     navigate(x=0, y=0, z=0, yaw=math.pi, speed=0.5, frame_id='navigate_target')
-    rospy.sleep(3)
-
-
-def wait_aruco(_id):
-    print 'waiting aruco %d' % _id
-    while not rospy.is_shutdown():
-        telem = get_telemetry('aruco_%d' % _id)
-        if not math.isnan(telem.x):
-            print 'got aruco %d' % _id
-            break
-        rospy.sleep(0.2)
+    rospy.sleep(6) # TODO: 6?
 
 
 def pick_payload():
@@ -175,8 +359,53 @@ def pick_payload():
 
 def land_to_target():
     wait_aruco(3)
-    navigate_wait(x=0, y=0, z=1, speed=0.3, frame_id='aruco_3')
-    land()
+    navigate_wait(x=0, y=0, z=0.6, speed=0.3, frame_id='aruco_3')
+    land() # TODO: check landing params
+
+
+def scan_line_a():
+    global current_line
+    current_line = 'A'
+
+    print 'start scanning'
+    navigate_and_wait_aruco(_id=105, y=4, speed=0.3, frame_id='navigate_target')
+    navigate_wait(x=0, y=0, z=1, speed=0.3, frame_id='aruco_105')
+
+    print 'fly down'
+    navigate_wait(x=0, y=0, z=-0.45, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(5))
+
+    scan_up(current_z=0.55, aruco=105)
+    fly_to_next()
+    scan_down()
+    fly_to_next()
+    scan_up()
+    fly_to_next()
+    scan_down(aruco=106)
+
+
+def scan_line_b():
+    global current_line
+    current_line = 'B'
+
+    print 'start scanning'
+    navigate_and_wait_aruco(_id=108, y=-6, speed=0.3, frame_id='navigate_target')
+    navigate_wait(x=0, y=0, z=1, speed=0.3, frame_id='aruco_108')
+
+    print 'fly down'
+    navigate_wait(x=0, y=0, z=-0.45, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(5))
+
+    scan_up(current_z=0.55, aruco=108)
+    fly_to_next()
+    scan_down()
+    fly_to_next()
+    scan_up()
+    fly_to_next()
+    scan_down(aruco=109)
+
+
+def flying_through_shelf(aruco=None):
+    # TODO 
+    pass
 
 
 def mission():
@@ -198,10 +427,10 @@ def mission():
     navigate_wait(x=0, y=0, z=1, speed=0.3, frame_id='aruco_120')
 
     print 'fly down'
-    navigate_wait(x=0, y=0, z=-0.3, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(1))
+    navigate_wait(x=0, y=0, z=-0.45, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(1))
 
-    global current_shelf
-    current_shelf = 'A'
+    global current_line
+    current_line = 'A'
     qr_sub = rospy.Subscriber('qr_reader/qr', DetectedQr, qr_cb, queue_size=1)
 
     scan()
@@ -209,7 +438,7 @@ def mission():
     qr_sub.unregister()
 
 
-packages = read_csv()
+packages = read_csv(5)
 print 'got packages', packages
 
 # ensure get_telemetry works
@@ -221,7 +450,7 @@ print get_telemetry()
 
 # print 'take off'
 # takeoff()
-mission()
+# mission()
 # print 'tkof'
 # print navigate(z=1.5, frame_id='body', auto_arm=True)
 # wait_aruco(0)
@@ -230,5 +459,3 @@ mission()
 # print 'finish'
 
 #fly_to_shelf()
-
-# rospy.spin()
