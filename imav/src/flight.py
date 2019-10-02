@@ -430,7 +430,8 @@ def scan_line_b():
     scan_down(aruco=109)
 
 
-def fly_through_shelf(aruco, count_right=0, up=0, z=2.7, dist_window=3):
+# z=2.7 or z=1.1
+def fly_through_shelf(aruco, count_right=4, up=0, z=2.7, dist_window=3):
     navigate_and_wait_aruco(_id=aruco, y=-count_right*BETWEEN_SHELVES, z=up, speed=-0.2, frame_id='navigate_target', timeout=rospy.Duration(15))
     navigate_wait(z=z, frame_id='aruco'+str(aruco), timeout=rospy.Duration(15))
 
@@ -492,23 +493,26 @@ def mission():
 
     scan_line_a()
 
-    fly_through_shelf(aruco=107)  # TODO: count_right
+    fly_through_shelf(aruco=107, z=2.7)  # TODO: count_right, z
 
     scan_line_b()
 
     print 'stop scanning qr'
     qr_sub.unregister()
 
-    fly_through_shelf(aruco=110)  # TODO: count_right
+    fly_through_shelf(aruco=110, z=2.7)  # TODO: count_right, z
 
     print 'fly right to landing'
-    count_to_landing = 1
+    count_to_landing = 4 # TODO:
     # TODO: dist right
     navigate_and_wait_aruco(_id=111, y=-count_to_landing*BETWEEN_SHELVES, speed=-0.3, frame_id='navigate_target', timeout=rospy.Duration(10))
 
+    print 'go down marker'
+    navigate_wait(z=2.2, speed=0.5, frame_id='aruco_111', timeout=rospy.Duration(10))
+
     print 'fly to landing'
     # TODO: dist forward
-    navigate_and_wait_aruco(_id=142, x=5, speed=-0.5, frame_id='navigate_target', timeout=rospy.Duration(10))
+    navigate_and_wait_aruco(_id=142, x=5, speed=0.5, frame_id='navigate_target', timeout=rospy.Duration(10))
     navigate_wait(x=0, y=0, z=0.5, speed=0.2, frame_id='aruco_142', tolerance=0.12)
     land()
 
