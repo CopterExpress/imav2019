@@ -199,7 +199,7 @@ def flag_cb(msg):
 
 def read_csv(index):
     import csv
-    with open('packages_demo.csv') as csvfile:
+    with open('Distribution1.csv') as csvfile:
         reader = csv.reader(csvfile)
         return list(reader)[5][1:]
 
@@ -244,6 +244,7 @@ def scan_up(current_z=LOWER_Z, aruco=None):
     global current_shelf, shelf_search_enabled, package_search_enabled
 
     current_shelf += 1
+    print 'current_shelf', current_shelf
 
     print 'fly to lower z'
     navigate_wait(z=LOWER_Z-current_z, speed=0.3, frame_id='navigate_target')
@@ -256,6 +257,7 @@ def scan_up(current_z=LOWER_Z, aruco=None):
 
     package_search_enabled = False
     current_shelf += 1
+    print 'current_shelf', current_shelf
 
     print 'fly to deadzone upper z'
     navigate_wait(z=DEADZONE_UPPER_Z-DEADZONE_LOWER_Z, speed=0.3, frame_id='navigate_target')
@@ -277,6 +279,7 @@ def scan_down(aruco=None):
     global current_shelf, shelf_search_enabled, package_search_enabled
 
     current_shelf += 1
+    print 'current_shelf', current_shelf
 
     if aruco:
         navigate_wait(x=0, y=0, z=UPPER_Z, speed=0.3, frame_id='aruco_' + str(aruco), timeout=rospy.Duration(5))
@@ -294,6 +297,7 @@ def scan_down(aruco=None):
 
     current_shelf += 1
     package_search_enabled = True
+    print 'current_shelf', current_shelf
 
     print 'fly to lower z'
     navigate_wait(z=LOWER_Z-DEADZONE_LOWER_Z, speed=0.3, frame_id='navigate_target')
