@@ -467,6 +467,13 @@ def _mission():
 # flag_sub = rospy.Subscriber('flag_detector/flag', Flag, flag_cb, queue_size=1)
 
 
+def fly_from_start_to_land():
+    print 'takeoff'
+    print navigate_wait(z=1.5, speed=1, frame_id='body', auto_arm=True, timeout=rospy.Duration(5))
+
+    # navigate_and_wait_aruco(y=)
+
+
 def mission():
     print 'takeoff'
     print navigate_wait(z=1.5, speed=1, frame_id='body', auto_arm=True, timeout=rospy.Duration(5))
@@ -497,7 +504,7 @@ def mission():
 
     print 'fly to landing'
     # TODO: dist forward
-    navigate_and_wait_aruco(_id=142, x=4, speed=-0.5, frame_id='navigate_target', timeout=rospy.Duration(10))
+    navigate_and_wait_aruco(_id=142, x=5, speed=-0.5, frame_id='navigate_target', timeout=rospy.Duration(10))
     navigate_wait(x=0, y=0, z=0.5, speed=0.2, frame_id='aruco_142', tolerance=0.12)
     land()
 
