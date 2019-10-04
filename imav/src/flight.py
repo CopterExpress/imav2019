@@ -6,6 +6,7 @@ import re
 from clever import srv
 from std_srvs.srv import Trigger
 from zbar_ros_redux.msg import DetectedQr
+from flag_detector.msg import Flag
 
 # Servo interaction
 import serial
@@ -60,6 +61,29 @@ def get_distance(x1, y1, z1, x2, y2, z2):
 packages = []
 found_packages = {}
 found_shelves = {}
+
+
+found_shelves = {
+    # first
+    1: {'code':'11B'},
+    2: {'code':'21B'},
+    3: {'code':'22B'},
+    4: {'code':'12B'},
+    5: {'code':'13B'},
+    6: {'code':'23B'},
+    7: {'code':'24B'},
+    8: {'code':'14B'},
+
+    # second
+    9:  {'code':'11A'},
+    10: {'code':'21A'},
+    11: {'code':'22A'},
+    12: {'code':'12A'},
+    13: {'code':'13A'},
+    14: {'code':'23A'},
+    15: {'code':'24A'},
+    16: {'code':'14A'},
+}
 
 
 # def save_shelve(name, qr=True):
@@ -192,9 +216,13 @@ def qr_cb(msg):
         print 'skip package', msg.qr_message
 
 
+def flag_cb(msg):
+    print 'flag', msg.country
+
+
 def read_csv(index):
     import csv
-    with open('packages_demo.csv') as csvfile:
+    with open('Distribution1.csv') as csvfile:
         reader = csv.reader(csvfile)
         return list(reader)[5][1:]
 
@@ -239,6 +267,7 @@ def scan_up(current_z=LOWER_Z, aruco=None):
     global current_shelf, shelf_search_enabled, package_search_enabled
 
     current_shelf += 1
+    print 'current_shelf', current_shelf
 
     print 'fly to lower z'
     navigate_wait(z=LOWER_Z-current_z, speed=0.3, frame_id='navigate_target')
@@ -251,6 +280,7 @@ def scan_up(current_z=LOWER_Z, aruco=None):
 
     package_search_enabled = False
     current_shelf += 1
+    print 'current_shelf', current_shelf
 
     print 'fly to deadzone upper z'
     navigate_wait(z=DEADZONE_UPPER_Z-DEADZONE_LOWER_Z, speed=0.3, frame_id='navigate_target')
@@ -272,6 +302,7 @@ def scan_down(aruco=None):
     global current_shelf, shelf_search_enabled, package_search_enabled
 
     current_shelf += 1
+    print 'current_shelf', current_shelf
 
     if aruco:
         navigate_wait(x=0, y=0, z=UPPER_Z, speed=0.3, frame_id='aruco_' + str(aruco), timeout=rospy.Duration(5))
@@ -289,6 +320,7 @@ def scan_down(aruco=None):
 
     current_shelf += 1
     package_search_enabled = True
+    print 'current_shelf', current_shelf
 
     print 'fly to lower z'
     navigate_wait(z=LOWER_Z-DEADZONE_LOWER_Z, speed=0.3, frame_id='navigate_target')
@@ -298,7 +330,7 @@ def scan_down(aruco=None):
 
 
 def fly_to_next():
-    navigate_wait(y=BETWEEN_SHELVES, speed=0.3, frame_id='navigate_target')  # TODO: y?
+    navigate_wait(y=BETWEEN_SHELVES, speed=0.5, frame_id='navigate_target')
 
 
 # def scan2():
@@ -361,7 +393,7 @@ def fly_to_shelf():
     navigate_wait(x=4, y=0, z=0, speed=0.5, frame_id='navigate_target', timeout=rospy.Duration(8))
     print 'adjust yaw'
     navigate(x=0, y=0, z=0, yaw=math.pi, speed=0.5, frame_id='navigate_target')
-    rospy.sleep(6) # TODO: 6?
+    rospy.sleep(5)
 
 
 def pick_payload():
@@ -383,7 +415,7 @@ def land_to_target():
 
 def scan_line_a():
     global current_line
-    current_line = 'A'
+    current_line = 'B'
 
     print 'start scanning'
     navigate_and_wait_aruco(_id=105, y=4, speed=0.3, frame_id='navigate_target')
@@ -403,10 +435,10 @@ def scan_line_a():
 
 def scan_line_b():
     global current_line
-    current_line = 'B'
+    current_line = 'A'
 
     print 'start scanning'
-    navigate_and_wait_aruco(_id=108, y=-6, speed=0.3, frame_id='navigate_target')
+    navigate_and_wait_aruco(_id=108, y=-3*BETWEEN_SHELVES, speed=0.3, frame_id='navigate_target')
     navigate_wait(x=0, y=0, z=1, speed=0.3, frame_id='aruco_108')
 
     print 'fly down'
@@ -421,15 +453,16 @@ def scan_line_b():
     scan_down(aruco=109)
 
 
-def fly_through_shelf(aruco, count_right=0, up=0, z=2.7, dist_window=3):
-    navigate_and_wait_aruco(_id=aruco, y=-count_right*BETWEEN_SHELVES, z=up, speed=-0.5, frame_id='navigate_target', timeout=rospy.Duration(15))
+# z=2.7 or z=1.1
+def fly_through_shelf(aruco, count_right=4, up=0, z=2.7, dist_window=3):
+    navigate_and_wait_aruco(_id=aruco, y=-count_right*BETWEEN_SHELVES, z=up, speed=-0.2, frame_id='navigate_target', timeout=rospy.Duration(15))
     navigate_wait(z=z, frame_id='aruco'+str(aruco), timeout=rospy.Duration(15))
 
     print 'fly through window'
     navigate_wait(x=dist_window, y=0, z=0, speed=0.8, frame_id='navigate_target')
 
 
-def mission():
+def _mission():
     handle('back')
 
     print 'takeoff'
@@ -457,6 +490,58 @@ def mission():
     scan()
 
     qr_sub.unregister()
+
+
+# flag_sub = rospy.Subscriber('flag_detector/flag', Flag, flag_cb, queue_size=1)
+
+
+def fly_from_start_to_land():
+    print 'takeoff'
+    print navigate_wait(z=1.5, speed=1, frame_id='body', auto_arm=True, timeout=rospy.Duration(5))
+
+    navigate_and_wait_aruco(_id=112, y=-4.25, x=-4.9, speed=0.8, frame_id='navigate_target', timeout=rospy.Duration(5))
+    navigate_wait(x=-0.3, yaw=math.pi, y=0, z=2.3, speed=0.3, frame_id='aruco_112')
+
+    handle('drop')
+
+    # navigate_and_wait_aruco(y=)
+
+
+def mission():
+    print 'takeoff'
+    print navigate_wait(z=1.5, speed=1, frame_id='body', auto_arm=True, timeout=rospy.Duration(5))
+
+    print 'fly over the flag'
+    print navigate_wait(y=-1, speed=0.5, frame_id='navigate_target', timeout=rospy.Duration(2))
+
+    fly_to_shelf()
+
+    print 'start scanning qr'
+    qr_sub = rospy.Subscriber('qr_reader/qr', DetectedQr, qr_cb, queue_size=1)
+
+    scan_line_a()
+
+    fly_through_shelf(aruco=107, z=2.8, up=2.15, count_right=1)  # TODO: count_right, z
+
+    scan_line_b()
+
+    print 'stop scanning qr'
+    qr_sub.unregister()
+
+    fly_through_shelf(aruco=110, up=1.5, count_right=2, z=1.2)  # TODO: count_right, z
+
+    print 'fly right to landing'
+    # TODO: dist right
+    navigate_and_wait_aruco(_id=111, y=-1, z=1, speed=0.3, frame_id='navigate_target', timeout=rospy.Duration(10))
+
+    print 'go down marker'
+    navigate_wait(z=2.2, speed=0.5, frame_id='aruco_111', timeout=rospy.Duration(10))
+
+    print 'fly to landing'
+    # TODO: dist forward
+    navigate_and_wait_aruco(_id=142, x=5, speed=0.5, frame_id='navigate_target', timeout=rospy.Duration(10))
+    navigate_wait(x=0, y=0, z=0.7, speed=0.2, frame_id='aruco_142', tolerance=0.12)
+    land()
 
 
 packages = read_csv(5)
